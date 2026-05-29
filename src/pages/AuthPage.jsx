@@ -95,24 +95,21 @@ function WifiRipple() {
 function detectType(val) {
   const v = val.trim()
   if (!v) return null
-  // Voucher: contains a dash and mostly alphanumeric e.g. DC10-FREE-HOUR
   if (/^[A-Z0-9]{2,}-[A-Z0-9]/.test(v.toUpperCase())) return 'voucher'
-  // Phone: starts with + or digits, mostly numbers
   if (/^\+?[\d\s\-]{7,}$/.test(v)) return 'phone'
-  // Email
   if (v.includes('@')) return 'email'
   return null
 }
 
 const TYPE_HINTS = {
-  email:   { label: 'Email detected', color: '#3B82F6' },
-  phone:   { label: 'Phone number detected', color: '#16A34A' },
-  voucher: { label: 'Voucher code detected', color: '#F47820' },
+  email:   { label: 'Email detected',          color: '#3B82F6' },
+  phone:   { label: 'Phone number detected',   color: '#16A34A' },
+  voucher: { label: 'Voucher code detected',   color: '#F47820' },
 }
 
 /* ─── Main Auth Page ─────────────────────────────────── */
 export default function AuthPage() {
-  const [value, setValue] = useState('')
+  const [value, setValue]   = useState('')
   const [loading, setLoading] = useState(false)
   const { login, showToast } = useApp()
   const navigate = useNavigate()
@@ -131,18 +128,16 @@ export default function AuthPage() {
         plan: 'Basic 10Mbps', dataUsed: 4.2, dataTotal: 10,
         expiry: '2026-07-15', provider: 'DirectCore ISP'
       })
-      const msg = type === 'voucher'
-        ? 'Voucher activated! Enjoy browsing.'
-        : 'Welcome to DirectCore!'
+      const msg = type === 'voucher' ? 'Voucher activated! Enjoy browsing.' : 'Welcome to DirectCore!'
       showToast(msg, 'success')
       navigate('/packages')
     }, 1800)
   }
 
   const STAT_ITEMS = [
-    { icon: Zap,    label: 'Ultra Fast', sub: 'Up to 1 Gbps'    },
-    { icon: Shield, label: 'Secured',    sub: 'WPA3 Encrypted'  },
-    { icon: Globe,  label: 'Always On',  sub: '99.9% Uptime'    },
+    { icon: Zap,    label: 'Ultra Fast', sub: 'Up to 1 Gbps'   },
+    { icon: Shield, label: 'Secured',    sub: 'WPA3 Encrypted' },
+    { icon: Globe,  label: 'Always On',  sub: '99.9% Uptime'   },
   ]
 
   return (
@@ -151,20 +146,22 @@ export default function AuthPage() {
       {/* ── LEFT PANEL ── */}
       <div className="relative lg:flex-1 h-64 lg:h-screen overflow-hidden auth-panel-bg">
         <NetworkAnimation />
-        <WifiRipple />
+        {/* <WifiRipple /> */}
         <div className="absolute inset-0 flex flex-col items-center justify-center z-10 p-8 pointer-events-none">
           <div className="text-center mt-40 lg:mt-0">
-            <p className="text-xs uppercase tracking-[0.3em] text-orange-300/60 font-medium mb-3">Powered by Onelynq App</p>
             <h2 className="text-3xl lg:text-4xl font-black text-white leading-tight mb-4" style={{ fontFamily: 'serif' }}>
               Seamless<br /><span style={{ color: '#F47820' }}>Connectivity</span>
             </h2>
-            <p className="text-sm text-blue-100/50 max-w-xs mx-auto">Intelligent WiFi infrastructure for homes, businesses & communities.</p>
+            <p className="text-sm text-blue-100/50 max-w-xs mx-auto">
+              Intelligent WiFi infrastructure for homes, businesses & communities.
+            </p>
           </div>
           <div className="flex flex-wrap justify-center gap-3 mt-8">
             {STAT_ITEMS.map(({ icon: Icon, label, sub }) => (
               <div key={label} className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl"
                 style={{ background: 'rgba(13,31,79,0.55)', backdropFilter: 'blur(16px)', border: '1px solid rgba(244,120,32,0.2)' }}>
-                <div className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(244,120,32,0.2)' }}>
+                <div className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(244,120,32,0.2)' }}>
                   <Icon size={14} color="#F47820" />
                 </div>
                 <div>
@@ -180,82 +177,95 @@ export default function AuthPage() {
       </div>
 
       {/* ── RIGHT PANEL ── */}
-      <div className="lg:w-[480px] xl:w-[520px] flex flex-col justify-center p-6 lg:p-12 relative overflow-y-auto"
-        style={{ background: 'linear-gradient(180deg,#06102A 0%,#0A1845 100%)', borderLeft: '1px solid rgba(46,84,196,0.15)' }}>
-
+      <div
+        className="lg:w-[480px] xl:w-[520px] flex flex-col justify-between p-6 lg:p-12 relative overflow-y-auto"
+        style={{ background: 'linear-gradient(180deg,#06102A 0%,#0A1845 100%)', borderLeft: '1px solid rgba(46,84,196,0.15)' }}
+      >
         {/* Subtle bg blob */}
         <div className="absolute top-0 left-0 w-64 h-64 rounded-full pointer-events-none opacity-20"
           style={{ background: 'radial-gradient(circle,#1B3A8F,transparent)', transform: 'translate(-40%,-40%)' }} />
 
-        {/* Logo */}
-        <div className="mb-10 animate-fade-in">
-          <img src={logo} alt="DirectCore" className="h-10 object-contain" style={{ filter: 'brightness(1.05)' }} />
-          <div className="flex items-center gap-2 mt-3">
-            <div className="w-1.5 h-1.5 rounded-full bg-orange-400 status-pulse" />
-            <p className="text-xs text-blue-200/50">WiFi Self-Service Portal</p>
+        {/* ── Main content ── */}
+        <div className="flex flex-col justify-center flex-1">
+
+          {/* Logo */}
+          <div className="mb-10 animate-fade-in">
+            <img src={logo} alt="DirectCore" className="h-10 object-contain" style={{ filter: 'brightness(1.05)' }} />
+            <div className="flex items-center gap-2 mt-3">
+              <div className="w-1.5 h-1.5 rounded-full bg-orange-400 status-pulse" />
+              <p className="text-xs text-blue-200/50">WiFi Self-Service Portal</p>
+            </div>
           </div>
+
+          {/* Heading */}
+          <div className="mb-8 animate-fade-in">
+            <h2 className="text-3xl font-black text-white" style={{ fontFamily: 'serif' }}>
+              Get Connected
+            </h2>
+            <p className="text-sm text-blue-200/45 mt-2">
+              Enter your phone, email, or voucher code to access your account.
+            </p>
+          </div>
+
+          {/* Input */}
+          <div className="animate-fade-in" style={{ marginBottom: 12 }}>
+            <label className="text-xs text-orange-400/80 mb-2 block font-semibold uppercase tracking-wider">
+              Phone · Email · Voucher
+            </label>
+            <input
+              className="portal-input"
+              placeholder="e.g. +254712... or you@mail.com or DC10-XXXX"
+              value={value}
+              onChange={e => setValue(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAccess()}
+              autoFocus
+              style={{ letterSpacing: value && detectType(value) === 'voucher' ? '0.12em' : 'normal' }}
+            />
+            {/* Type hint */}
+            <div style={{ height: 22, marginTop: 8 }}>
+              {type && (
+                <div className="flex items-center gap-1.5 animate-fade-in">
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: TYPE_HINTS[type].color, flexShrink: 0 }} />
+                  <span style={{ fontSize: 11, color: TYPE_HINTS[type].color, fontWeight: 600 }}>
+                    {TYPE_HINTS[type].label}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Access button */}
+          <button
+            className="btn-primary animate-fade-in"
+            onClick={handleAccess}
+            disabled={loading || !value.trim()}
+            style={{ marginTop: 4 }}
+          >
+            {loading
+              ? <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Connecting...
+                </span>
+              : <span className="flex items-center justify-center gap-2">
+                  {type === 'voucher' ? <Zap size={16} /> : <ArrowRight size={16} />}
+                  {type === 'voucher' ? 'Activate & Connect' : 'Access Account'}
+                </span>
+            }
+          </button>
         </div>
 
-        {/* Heading */}
-        <div className="mb-8 animate-fade-in">
-          <h2 className="text-3xl font-black text-white" style={{ fontFamily: 'serif' }}>
-            Get Connected
-          </h2>
-          <p className="text-sm text-blue-200/45 mt-2">
-            Enter your phone, email, or voucher code to access your account.
+        {/* ── Footer ── */}
+        <div className="mt-10 text-center space-y-1.5">
+          <p className="text-xs uppercase tracking-[0.3em] font-medium" style={{ color: 'rgba(253,186,116,0.45)' }}>
+            Powered by Onelynq App
+          </p>
+          <p className="text-xs" style={{ color: 'rgba(147,166,220,0.2)' }}>
+            © 2026 DirectCore · By connecting you accept our{' '}
+            <span className="underline underline-offset-2 cursor-pointer" style={{ color: 'rgba(147,166,220,0.35)' }}>
+              terms of use
+            </span>
           </p>
         </div>
-
-        {/* Single input */}
-        <div className="animate-fade-in" style={{ marginBottom: 12 }}>
-          <label className="text-xs text-orange-400/80 mb-2 block font-semibold uppercase tracking-wider">
-            Phone · Email · Voucher
-          </label>
-          <input
-            className="portal-input"
-            placeholder="e.g. +254712... or you@mail.com or DC10-XXXX"
-            value={value}
-            onChange={e => setValue(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleAccess()}
-            autoFocus
-            style={{ letterSpacing: value && detectType(value) === 'voucher' ? '0.12em' : 'normal' }}
-          />
-
-          {/* Type hint */}
-          <div style={{ height: 22, marginTop: 8 }}>
-            {type && (
-              <div className="flex items-center gap-1.5 animate-fade-in">
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: TYPE_HINTS[type].color, flexShrink: 0 }} />
-                <span style={{ fontSize: 11, color: TYPE_HINTS[type].color, fontWeight: 600 }}>
-                  {TYPE_HINTS[type].label}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Access button */}
-        <button
-          className="btn-primary animate-fade-in"
-          onClick={handleAccess}
-          disabled={loading || !value.trim()}
-          style={{ marginTop: 4 }}
-        >
-          {loading
-            ? <span className="flex items-center justify-center gap-2">
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Connecting...
-              </span>
-            : <span className="flex items-center justify-center gap-2">
-                {type === 'voucher' ? <Zap size={16} /> : <ArrowRight size={16} />}
-                {type === 'voucher' ? 'Activate & Connect' : 'Access Account'}
-              </span>}
-        </button>
-
-        {/* Footer */}
-        <p className="mt-10 text-xs text-blue-200/20 text-center">
-          © 2026 DirectCore · By connecting you accept our terms of use
-        </p>
       </div>
     </div>
   )
