@@ -268,7 +268,32 @@ button { font-family: var(--font-body); }
   backdrop-filter: blur(5px);
   z-index: 40;
 }
+/* ── Main content area ─────────────────────────────────── */
+.main-content {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  overflow-y: auto;
+}
 
+.page-container {
+  width: 100%;
+  max-width: 100%;
+  padding: 28px 32px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1024px) {
+  .page-container { padding: 24px 24px; }
+}
+
+@media (max-width: 768px) {
+  .page-container { padding: 20px 16px; }
+}
+
+@media (max-width: 480px) {
+  .page-container { padding: 16px 12px; }
+}
 /* ── Mobile ────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .toast { bottom: 80px; right: 16px; left: 16px; }

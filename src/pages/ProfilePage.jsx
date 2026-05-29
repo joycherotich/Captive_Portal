@@ -6,37 +6,23 @@ const css = `
   @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.7;transform:scale(1.3)} }
   @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
-  .pf-wrap { animation: fadeUp .4s ease both; max-width: 740px; width: 100%; box-sizing: border-box; }
+  /* ── Wrapper: fills the parent, no artificial cap ── */
+  .pf-wrap {
+    animation: fadeUp .4s ease both;
+    width: 100%;
+    box-sizing: border-box;
+  }
 
   /* hero card */
   .pf-hero { border-radius: 22px; overflow: hidden; margin-bottom: 16px;
     background: var(--bg-card); border: 1px solid var(--border); box-shadow: var(--shadow-md); }
 
-  .pf-banner {
-    height: 130px; position: relative; overflow: hidden;
-    background: #111827;
-  }
-  .pf-banner-inner {
-    position: absolute; inset: 0;
-    background:
-      radial-gradient(ellipse 55% 90% at 92% 50%, rgba(244,120,32,0.18) 0%, transparent 60%),
-      radial-gradient(ellipse 50% 70% at 50% 130%, rgba(244,120,32,0.1) 0%, transparent 60%);
-  }
-  .pf-banner-grid {
-    position: absolute; inset: 0;
-    background-image:
-      linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
-    background-size: 28px 28px;
-  }
-  .pf-banner-shine {
-    position: absolute; inset: 0;
-    background: linear-gradient(160deg, rgba(255,255,255,0.05) 0%, transparent 50%);
-  }
+  .pf-body { padding: 24px; }
 
-  .pf-body { padding: 0 24px 24px; }
-
-  .pf-avatar-row { display: flex; align-items: center; gap: 16px; margin-top: 0; margin-bottom: 18px; flex-wrap: wrap; }
+  .pf-avatar-row {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 18px; flex-wrap: wrap;
+  }
 
   .pf-avatar {
     width: 88px; height: 88px; border-radius: 22px; flex-shrink: 0;
@@ -50,16 +36,16 @@ const css = `
   .pf-cam-btn {
     position: absolute; bottom: -7px; right: -7px;
     width: 28px; height: 28px; border-radius: 9px;
-    border: 3px solid var(--bg-card);
-    background: #2563EB;
+    border: 3px solid var(--bg-card); background: #2563EB;
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; transition: transform .15s;
   }
   .pf-cam-btn:hover { transform: scale(1.12); }
 
-  .pf-meta { flex: 1; min-width: 0; padding-bottom: 4px; }
+  .pf-meta { flex: 1; min-width: 0; }
   .pf-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 3px; }
-  .pf-name { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -0.03em; color: var(--text-main); font-family: var(--font-display); word-break: break-word; }
+  .pf-name { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -0.03em;
+    color: var(--text-main); font-family: var(--font-display); word-break: break-word; }
   .pf-verified { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700;
     padding: 3px 9px; border-radius: 20px; background: rgba(244,120,32,0.1); color: #F47820;
     border: 1px solid rgba(244,120,32,0.22); font-family: var(--font-display); flex-shrink: 0; }
@@ -69,25 +55,30 @@ const css = `
     display: flex; align-items: center; gap: 6px;
     padding: 6px 13px; border-radius: 20px;
     background: rgba(22,163,74,0.08); border: 1px solid rgba(22,163,74,0.2);
-    margin-bottom: 4px; flex-shrink: 0;
+    flex-shrink: 0; align-self: flex-start;
   }
   .pf-dot { width: 7px; height: 7px; border-radius: 50%; background: #16A34A;
     box-shadow: 0 0 0 2.5px rgba(22,163,74,0.25); animation: pulse-dot 2.2s infinite; }
   .pf-status-label { font-size: 12px; font-weight: 700; color: #16A34A; font-family: var(--font-display); }
 
-  /* divider */
   .pf-divider { height: 1px; background: var(--border); margin: 0 0 18px; }
 
-  /* stats */
-  .pf-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+  /* stats — fluid columns that wrap naturally */
+  .pf-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+  }
   .pf-stat {
     background: var(--bg); border: 1px solid var(--border); border-radius: 14px;
     padding: 13px 14px; display: flex; align-items: center; gap: 12px;
   }
-  .pf-stat-icon { width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .pf-stat-icon { width: 38px; height: 38px; border-radius: 11px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .pf-stat-label { margin: 0; font-size: 11px; color: var(--text-muted); }
   .pf-stat-value { margin: 2px 0 0; font-size: 13px; font-weight: 700; color: var(--text-main);
-    font-family: var(--font-display); letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    font-family: var(--font-display); letter-spacing: -0.01em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   /* section card */
   .pf-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px;
@@ -101,10 +92,16 @@ const css = `
     background: rgba(244,120,32,0.1); color: #F47820; border: 1px solid rgba(244,120,32,0.2);
     font-family: var(--font-display); flex-shrink: 0; }
 
-  /* form */
-  .pf-form { padding: 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+  /* form — fluid two-column that collapses to one */
+  .pf-form {
+    padding: 22px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 15px;
+  }
   .pf-field-label { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
-    text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; font-family: var(--font-display); }
+    text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;
+    font-family: var(--font-display); }
   .pf-input-wrap { position: relative; }
   .pf-input-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); pointer-events: none; }
 
@@ -128,7 +125,8 @@ const css = `
   .pf-danger { margin: 4px 18px 18px; padding: 14px 18px; border-radius: 14px;
     background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.12);
     display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .pf-danger-title { margin: 0; font-size: 13px; font-weight: 700; color: #EF4444; font-family: var(--font-display); }
+  .pf-danger-title { margin: 0; font-size: 13px; font-weight: 700; color: #EF4444;
+    font-family: var(--font-display); }
   .pf-danger-sub { margin: 2px 0 0; font-size: 12px; color: var(--text-muted); }
   .pf-danger-btn {
     font-size: 12px; font-weight: 700; padding: 7px 16px; border-radius: 10px;
@@ -138,7 +136,8 @@ const css = `
   .pf-danger-btn:hover { background: #EF4444; color: white; }
 
   /* header */
-  .pf-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; gap: 12px; }
+  .pf-header { display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
   .pf-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.18em; color: #F47820;
     text-transform: uppercase; font-family: var(--font-display); margin-bottom: 3px; }
   .pf-h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; color: var(--text-main);
@@ -158,43 +157,36 @@ const css = `
     border: 1.5px solid var(--border); box-shadow: var(--shadow);
   }
 
-  /* responsive */
-  @media (max-width:600px) {
+  /* ── Responsive overrides ── */
+  @media (max-width: 480px) {
     .pf-header { flex-direction: column; align-items: flex-start; }
     .pf-edit-btn { width: 100%; }
-    .pf-avatar { width: 70px !important; height: 70px !important; font-size: 22px !important; border-radius: 18px !important; }
-    .pf-body { padding: 0 16px 20px !important; }
-    .pf-stats { grid-template-columns: 1fr !important; }
-    .pf-form { grid-template-columns: 1fr !important; padding: 16px !important; }
-    .pf-form-full { grid-column: auto !important; }
+    .pf-avatar { width: 68px !important; height: 68px !important;
+      font-size: 22px !important; border-radius: 17px !important; }
+    .pf-body { padding: 16px !important; }
+    .pf-form { padding: 16px !important; }
     .pf-card-head { padding: 14px 16px 12px !important; }
     .pf-settings-list { padding: 6px 8px !important; }
-    .pf-danger { flex-direction: column; align-items: flex-start; margin: 4px 12px 16px !important; }
+    .pf-danger { flex-direction: column; align-items: flex-start;
+      margin: 4px 12px 16px !important; }
     .pf-danger-btn { width: 100%; text-align: center; }
-    .pf-name-row { gap: 6px; }
-    .pf-status { margin-bottom: 0 !important; align-self: flex-start; }
-  }
-  @media (min-width:601px) and (max-width:760px) {
-    .pf-stats { grid-template-columns: repeat(2,1fr) !important; }
-    .pf-form { grid-template-columns: 1fr !important; }
-    .pf-form-full { grid-column: auto !important; }
   }
 `
 
 export default function ProfilePage() {
   const { user, showToast } = useApp()
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing]     = useState(false)
   const [activeField, setActiveField] = useState(null)
   const [form, setForm] = useState({
-    name: user?.name || 'Joy Letim',
-    email: user?.email || 'joy@example.com',
-    phone: user?.phone || '+254742142959',
+    name:     user?.name     || 'Joy Letim',
+    email:    user?.email    || 'joy@example.com',
+    phone:    user?.phone    || '+254742142959',
     location: 'Nairobi, Kenya',
     idNumber: 'KE1234567',
   })
 
-  const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
-  const save = () => { setEditing(false); showToast('Profile updated!', 'success') }
+  const set   = (k, v) => setForm(p => ({ ...p, [k]: v }))
+  const save  = ()     => { setEditing(false); showToast('Profile updated!', 'success') }
   const initials = form.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
 
   const fields = [
@@ -202,19 +194,24 @@ export default function ProfilePage() {
     { label: 'Email Address', key: 'email',    icon: Mail,   type: 'email' },
     { label: 'Phone Number',  key: 'phone',    icon: Phone,  type: 'tel'   },
     { label: 'Location',      key: 'location', icon: MapPin, type: 'text'  },
-    { label: 'ID Number',     key: 'idNumber', icon: Shield, type: 'text'  },
+    { label: 'ID Number',     key: 'idNumber', icon: Shield, type: 'text',
+      fullWidth: true },
   ]
 
   const stats = [
-    { icon: Zap,      label: 'Current Plan', value: user?.plan || 'Basic 10Mbps', color: '#F47820', bg: 'rgba(244,120,32,0.12)'  },
-    { icon: Activity, label: 'Data Used',    value: `${user?.dataUsed || 4.2} / ${user?.dataTotal || 10} GB`, color: '#3B82F6', bg: 'rgba(59,130,246,0.12)' },
-    { icon: Star,     label: 'Member Since', value: 'Jan 2026',                   color: '#8B5CF6', bg: 'rgba(139,92,246,0.12)' },
+    { icon: Zap,      label: 'Current Plan', value: user?.plan || 'Basic 10Mbps',
+      color: '#F47820', bg: 'rgba(244,120,32,0.12)' },
+    { icon: Activity, label: 'Data Used',
+      value: `${user?.dataUsed || 4.2} / ${user?.dataTotal || 10} GB`,
+      color: '#3B82F6', bg: 'rgba(59,130,246,0.12)' },
+    { icon: Star,     label: 'Member Since', value: 'Jan 2026',
+      color: '#8B5CF6', bg: 'rgba(139,92,246,0.12)' },
   ]
 
   const settings = [
-    { icon: Lock,   label: 'Change Password', sub: 'Last changed 30 days ago',         badge: null,  badgeType: null },
-    { icon: Bell,   label: 'Notifications',   sub: 'Email & SMS alerts enabled',        badge: '3',   badgeType: 'blue' },
-    { icon: Shield, label: 'Two-Factor Auth', sub: 'Add extra security to your account',badge: 'Off', badgeType: 'orange' },
+    { icon: Lock,   label: 'Change Password', sub: 'Last changed 30 days ago',          badge: null, badgeType: null },
+    { icon: Bell,   label: 'Notifications',   sub: 'Email & SMS alerts enabled',         badge: '3',  badgeType: 'blue' },
+    { icon: Shield, label: 'Two-Factor Auth', sub: 'Add extra security to your account', badge: 'Off',badgeType: 'orange' },
   ]
 
   return (
@@ -233,52 +230,46 @@ export default function ProfilePage() {
             onClick={() => editing ? save() : setEditing(true)}
           >
             {editing
-              ? <><Check size={14} strokeWidth={3} /> Save Changes</>
-              : <><Edit3 size={14} /> Edit Profile</>}
+              ? <><Check size={14} strokeWidth={3}/> Save Changes</>
+              : <><Edit3 size={14}/> Edit Profile</>}
           </button>
         </div>
 
         {/* ── Hero Card ── */}
-        <div className="pf-hero mt-4">
+        <div className="pf-hero">
+          <div className="pf-body">
 
-
-          {/* Content */}
-          <div className="pf-body" style={{ padding: '24px 24px 24px' }}>
             <div className="pf-avatar-row">
-              {/* Avatar */}
               <div className="pf-avatar">
                 {initials}
                 <button className="pf-cam-btn" aria-label="Change photo">
-                  <Camera size={11} color="white" strokeWidth={2.5} />
+                  <Camera size={11} color="white" strokeWidth={2.5}/>
                 </button>
               </div>
 
-              {/* Name / email */}
-              <div className="pf-meta mt-6">
+              <div className="pf-meta">
                 <div className="pf-name-row">
                   <h2 className="pf-name">{form.name}</h2>
                   <span className="pf-verified">
-                    <Shield size={9} strokeWidth={3} /> Verified
+                    <Shield size={9} strokeWidth={3}/> Verified
                   </span>
                 </div>
                 <p className="pf-email">{form.email}</p>
               </div>
 
-              {/* Active */}
-              <div className="pf-status mt-6">
-                <span className="pf-dot" />
+              <div className="pf-status">
+                <span className="pf-dot"/>
                 <span className="pf-status-label">Active</span>
               </div>
             </div>
 
-            <div className="pf-divider" />
+            <div className="pf-divider"/>
 
-            {/* Stats */}
             <div className="pf-stats">
               {stats.map(({ icon: Icon, label, value, color, bg }) => (
                 <div key={label} className="pf-stat">
                   <div className="pf-stat-icon" style={{ background: bg }}>
-                    <Icon size={16} color={color} strokeWidth={2} />
+                    <Icon size={16} color={color} strokeWidth={2}/>
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <p className="pf-stat-label">{label}</p>
@@ -287,6 +278,7 @@ export default function ProfilePage() {
                 </div>
               ))}
             </div>
+
           </div>
         </div>
 
@@ -301,12 +293,8 @@ export default function ProfilePage() {
           </div>
 
           <div className="pf-form">
-            {fields.map(({ label, key, icon: Icon, type }) => (
-              <div
-                key={key}
-                className={key === 'idNumber' ? 'pf-form-full' : ''}
-                style={key === 'idNumber' ? { gridColumn: '1 / -1' } : {}}
-              >
+            {fields.map(({ label, key, icon: Icon, type, fullWidth }) => (
+              <div key={key} style={fullWidth ? { gridColumn: '1 / -1' } : {}}>
                 <label className="pf-field-label">{label}</label>
                 <div className="pf-input-wrap">
                   <div className="pf-input-icon">
@@ -328,7 +316,9 @@ export default function ProfilePage() {
                       paddingLeft: 38,
                       width: '100%',
                       boxSizing: 'border-box',
-                      background: editing ? (activeField === key ? '#fff' : 'var(--bg)') : 'var(--bg)',
+                      background: editing
+                        ? (activeField === key ? '#fff' : 'var(--bg)')
+                        : 'var(--bg)',
                       opacity: editing ? 1 : 0.8,
                       cursor: editing ? 'text' : 'default',
                       fontFamily: 'var(--font-body)',
@@ -354,7 +344,7 @@ export default function ProfilePage() {
             {settings.map(({ icon: Icon, label, sub, badge, badgeType }) => (
               <button key={label} className="pf-setting-btn">
                 <div className="pf-setting-icon">
-                  <Icon size={16} color="var(--blue-light)" strokeWidth={1.8} />
+                  <Icon size={16} color="var(--blue-light)" strokeWidth={1.8}/>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p className="pf-setting-label">{label}</p>
@@ -370,13 +360,12 @@ export default function ProfilePage() {
                         : { background:'rgba(59,130,246,0.1)', color:'var(--blue-light)', border:'1px solid rgba(59,130,246,0.2)' })
                     }}>{badge}</span>
                   )}
-                  <ChevronRight size={15} color="var(--text-muted)" strokeWidth={2} />
+                  <ChevronRight size={15} color="var(--text-muted)" strokeWidth={2}/>
                 </div>
               </button>
             ))}
           </div>
 
-          {/* Danger zone */}
           <div className="pf-danger">
             <div>
               <p className="pf-danger-title">Delete Account</p>
