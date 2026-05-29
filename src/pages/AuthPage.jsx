@@ -24,8 +24,9 @@ function NetworkAnimation() {
     }
     window.addEventListener('resize', resize)
 
+    // Nodes
     const nodeCount = 18
-    const nodes = Array.from({ length: nodeCount }, () => ({
+    const nodes = Array.from({ length: nodeCount }, (_, i) => ({
       x: Math.random() * W,
       y: Math.random() * H,
       vx: (Math.random() - 0.5) * 0.5,
@@ -35,6 +36,7 @@ function NetworkAnimation() {
       color: Math.random() > 0.5 ? '#F47820' : '#4D78E8',
     }))
 
+    // Packets
     const packets = []
     const addPacket = () => {
       const a = Math.floor(Math.random() * nodeCount)
@@ -47,11 +49,15 @@ function NetworkAnimation() {
     let frame = 0
     const draw = () => {
       ctx.clearRect(0, 0, W, H)
+
+      // Update nodes
       nodes.forEach(n => {
         n.x += n.vx; n.y += n.vy; n.pulse += 0.04
         if (n.x < 0 || n.x > W) n.vx *= -1
         if (n.y < 0 || n.y > H) n.vy *= -1
       })
+
+      // Draw connections
       for (let i = 0; i < nodeCount; i++) {
         for (let j = i + 1; j < nodeCount; j++) {
           const dx = nodes[i].x - nodes[j].x
@@ -71,12 +77,16 @@ function NetworkAnimation() {
           }
         }
       }
+
+      // Draw nodes
       nodes.forEach(n => {
         const pulse = (Math.sin(n.pulse) + 1) / 2
+        // Outer glow ring
         ctx.beginPath()
         ctx.arc(n.x, n.y, n.r + 6 + pulse * 4, 0, Math.PI * 2)
         ctx.fillStyle = n.color === '#F47820' ? `rgba(244,120,32,${0.05 + pulse * 0.08})` : `rgba(77,120,232,${0.05 + pulse * 0.08})`
         ctx.fill()
+        // Core dot
         const g = ctx.createRadialGradient(n.x - 1, n.y - 1, 0, n.x, n.y, n.r)
         g.addColorStop(0, '#ffffff')
         g.addColorStop(1, n.color)
@@ -88,7 +98,9 @@ function NetworkAnimation() {
         ctx.fill()
         ctx.shadowBlur = 0
       })
-      packets.forEach(p => {
+
+      // Draw + update packets
+      packets.forEach((p, pi) => {
         p.t += p.speed
         if (p.t > 1) {
           p.t = 0
@@ -109,12 +121,16 @@ function NetworkAnimation() {
         ctx.fill()
         ctx.shadowBlur = 0
       })
+
+      // Spawn new packets occasionally
       frame++
       if (frame % 90 === 0 && packets.length < 8) addPacket()
       if (frame % 180 === 0 && packets.length > 4) packets.splice(0, 1)
+
       animId = requestAnimationFrame(draw)
     }
     draw()
+
     return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', resize) }
   }, [])
 
@@ -128,21 +144,22 @@ function WifiRipple() {
       {[1,2,3,4].map(i => (
         <div key={i} className="absolute rounded-full border border-orange-400/20"
           style={{
-            width: `${i * 80}px`, height: `${i * 80}px`,
+            width: `${i * 110}px`, height: `${i * 110}px`,
             animation: `wifiRing ${2 + i * 0.6}s ease-out ${i * 0.4}s infinite`,
           }}
         />
       ))}
-      <div className="relative z-10 w-14 h-14 lg:w-20 lg:h-20 rounded-3xl flex items-center justify-center"
+      <div className="relative z-10 w-20 h-20 rounded-3xl flex items-center justify-center"
         style={{ background: 'linear-gradient(135deg,#F47820,#D4631A)', boxShadow: '0 0 50px rgba(244,120,32,0.6), 0 0 100px rgba(244,120,32,0.2)' }}>
-        <Wifi size={24} color="white" strokeWidth={2} className="lg:hidden" />
-        <Wifi size={36} color="white" strokeWidth={2} className="hidden lg:block" />
+        <Wifi size={36} color="white" strokeWidth={2} />
       </div>
     </div>
   )
 }
 
 /* ─── Main Auth Page ─────────────────────────────────── */
+const TABS = ['login', 'register', 'voucher']
+
 export default function AuthPage() {
   const [tab, setTab] = useState('login')
   const [showPass, setShowPass] = useState(false)
@@ -179,33 +196,22 @@ export default function AuthPage() {
     <div className="min-h-screen flex flex-col lg:flex-row" style={{ background: 'var(--bg-deep)' }}>
 
       {/* ── LEFT PANEL: Animation ── */}
-      {/* Mobile: compact banner. Desktop: full-height panel */}
-      <div className="relative lg:flex-1 overflow-hidden auth-panel-bg"
-        style={{ height: '200px' }}
-        ref={el => {
-          // Allow natural height on lg+
-          if (el) {
-            const setH = () => {
-              if (window.innerWidth >= 1024) el.style.height = '100vh'
-              else el.style.height = '200px'
-            }
-            setH()
-            window.addEventListener('resize', setH)
-          }
-        }}
-      >
+      <div className="relative lg:flex-1 h-64 lg:h-screen overflow-hidden auth-panel-bg">
         <NetworkAnimation />
         <WifiRipple />
 
-        {/* Overlay content — hidden on mobile to keep banner compact */}
-        <div className="absolute inset-0 items-center justify-center z-10 p-8 pointer-events-none hidden lg:flex flex-col">
-          <div className="text-center">
-            <p className="text-xs uppercase tracking-[0.3em] text-orange-300/60 font-medium mb-3">Powered by Onelynq</p>
-            <h2 className="text-3xl lg:text-4xl font-black text-white leading-tight mb-4" style={{ fontFamily: 'serif' }}>
+        {/* Overlay content */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-10 p-8 pointer-events-none">
+          {/* Big label */}
+          <div className="text-center mt-40 lg:mt-0">
+            <p className="text-xs uppercase tracking-[0.3em] text-orange-300/60 font-medium mb-3">Powered by Onelynq App</p>
+            <h2 className="text-3xl lg:text-4xl font-black text-white leading-tight mb-4" style={{ fontFamily: 'Syne,sans-serif' }}>
               Seamless<br /><span style={{ color: '#F47820' }}>Connectivity</span>
             </h2>
             <p className="text-sm text-blue-100/50 max-w-xs mx-auto">Intelligent WiFi infrastructure for homes, businesses & communities.</p>
           </div>
+
+          {/* Stat chips */}
           <div className="flex flex-wrap justify-center gap-3 mt-8">
             {STAT_ITEMS.map(({ icon: Icon, label, sub }) => (
               <div key={label} className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl" style={{ background: 'rgba(13,31,79,0.55)', backdropFilter: 'blur(16px)', border: '1px solid rgba(244,120,32,0.2)' }}>
@@ -221,53 +227,29 @@ export default function AuthPage() {
           </div>
         </div>
 
-        {/* Mobile-only: simple centred wordmark */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none lg:hidden">
-          <p className="text-xs uppercase tracking-[0.3em] text-orange-300/70 font-medium mb-1">Powered by Onelynq</p>
-
-        </div>
-
-        <div className="absolute bottom-0 left-0 right-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(to top,rgba(6,16,42,0.8),transparent)' }} />
+        {/* Decorative corner */}
+        <div className="absolute bottom-0 left-0 right-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to top,rgba(6,16,42,0.6),transparent)' }} />
       </div>
 
       {/* ── RIGHT PANEL: Auth Form ── */}
-      <div
-        className="flex flex-col justify-start lg:justify-center p-5 sm:p-8 lg:p-12 relative overflow-y-auto"
-        style={{
-          background: 'linear-gradient(180deg,#06102A 0%,#0A1845 100%)',
-          borderLeft: '1px solid rgba(46,84,196,0.15)',
-          // On mobile takes remaining height; on desktop fixed width
-          flex: '1 1 auto',
-          minHeight: 0,
-          width: '100%',
-        }}
-        ref={el => {
-          if (el) {
-            const setW = () => {
-              if (window.innerWidth >= 1280) el.style.width = '520px'
-              else if (window.innerWidth >= 1024) el.style.width = '480px'
-              else el.style.width = '100%'
-            }
-            setW()
-            window.addEventListener('resize', setW)
-          }
-        }}
-      >
+      <div className="lg:w-[480px] xl:w-[520px] flex flex-col justify-center p-6 lg:p-12 relative overflow-y-auto"
+        style={{ background: 'linear-gradient(180deg,#06102A 0%,#0A1845 100%)', borderLeft: '1px solid rgba(46,84,196,0.15)' }}>
+
         {/* Subtle bg decoration */}
         <div className="absolute top-0 left-0 w-64 h-64 rounded-full pointer-events-none opacity-20"
           style={{ background: 'radial-gradient(circle,#1B3A8F,transparent)', transform: 'translate(-40%,-40%)' }} />
 
         {/* Logo */}
-        <div className="mb-6 lg:mb-8 animate-fade-in">
-          <img src={logo} alt="DirectCore" className="h-8 lg:h-10 object-contain" style={{ filter: 'brightness(1.05)' }} />
-          <div className="flex items-center gap-2 mt-2 lg:mt-3">
+        <div className="mb-8 animate-fade-in">
+          <img src={logo} alt="DirectCore" className="h-10 object-contain" style={{ filter: 'brightness(1.05)' }} />
+          <div className="flex items-center gap-2 mt-3">
             <div className="w-1.5 h-1.5 rounded-full bg-orange-400 status-pulse" />
             <p className="text-xs text-blue-200/50">WiFi Self-Service Portal</p>
           </div>
         </div>
 
         {/* Tab switcher */}
-        <div className="flex rounded-2xl p-1 mb-5 lg:mb-6 animate-fade-in" style={{ background: 'rgba(6,16,42,0.6)', border: '1px solid rgba(46,84,196,0.2)' }}>
+        <div className="flex rounded-2xl p-1 mb-6 animate-fade-in" style={{ background: 'rgba(6,16,42,0.6)', border: '1px solid rgba(46,84,196,0.2)' }}>
           {[
             { id: 'login', icon: LogIn, label: 'Sign In' },
             { id: 'register', icon: UserPlus, label: 'Register' },
@@ -280,16 +262,17 @@ export default function AuthPage() {
                 : { color: 'rgba(238,242,255,0.4)' }
               }>
               <Icon size={14} />
-              <span>{label}</span>
+              <span className="hidden sm:inline">{label}</span>
+              <span className="sm:hidden">{label.split(' ')[0]}</span>
             </button>
           ))}
         </div>
 
         {/* ── LOGIN ── */}
         {tab === 'login' && (
-          <div className="space-y-4 lg:space-y-5 animate-slide-up">
+          <div className="space-y-5 animate-slide-up">
             <div>
-              <h2 className="text-xl lg:text-2xl font-black" style={{ fontFamily: 'serif' }}>Welcome back 👋</h2>
+              <h2 className="text-2xl font-black" style={{ fontFamily: 'Syne,sans-serif' }}>Welcome back 👋</h2>
               <p className="text-sm text-blue-200/45 mt-1">Sign in to manage your connection</p>
             </div>
             <div className="space-y-3">
@@ -316,7 +299,7 @@ export default function AuthPage() {
                 <button className="text-xs text-orange-400 hover:underline font-medium">Forgot password?</button>
               </div>
             </div>
-            <button className="btn-primary w-full" onClick={handleSubmit} disabled={loading}>
+            <button className="btn-primary" onClick={handleSubmit} disabled={loading}>
               {loading
                 ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Signing in...</span>
                 : <span className="flex items-center justify-center gap-2">Sign In <ArrowRight size={16} /></span>}
@@ -329,12 +312,12 @@ export default function AuthPage() {
 
         {/* ── REGISTER ── */}
         {tab === 'register' && (
-          <div className="space-y-3 lg:space-y-4 animate-slide-up">
+          <div className="space-y-4 animate-slide-up">
             <div>
-              <h2 className="text-xl lg:text-2xl font-black" style={{ fontFamily: 'serif' }}>Create Account</h2>
+              <h2 className="text-2xl font-black" style={{ fontFamily: 'Syne,sans-serif' }}>Create Account</h2>
               <p className="text-sm text-blue-200/45 mt-1">Join DirectCore in under a minute</p>
             </div>
-            <div className="space-y-2.5 lg:space-y-3">
+            <div className="space-y-3">
               {[
                 { label: 'Full Name', key: 'name', placeholder: 'Joy Kirui', type: 'text' },
                 { label: 'Email Address', key: 'email', placeholder: 'letimjoy7@gmail.com', type: 'email' },
@@ -363,7 +346,7 @@ export default function AuthPage() {
                 </span>
               </label>
             </div>
-            <button className="btn-primary w-full" onClick={handleSubmit} disabled={loading}>
+            <button className="btn-primary" onClick={handleSubmit} disabled={loading}>
               {loading
                 ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Creating account...</span>
                 : <span className="flex items-center justify-center gap-2">Create Free Account <ArrowRight size={16} /></span>}
@@ -376,27 +359,28 @@ export default function AuthPage() {
 
         {/* ── VOUCHER ── */}
         {tab === 'voucher' && (
-          <div className="space-y-4 lg:space-y-5 animate-slide-up">
+          <div className="space-y-5 animate-slide-up">
             <div>
-              <h2 className="text-xl lg:text-2xl font-black" style={{ fontFamily: 'serif' }}>Voucher Access</h2>
+              <h2 className="text-2xl font-black" style={{ fontFamily: 'Syne,sans-serif' }}>Voucher Access</h2>
               <p className="text-sm text-blue-200/45 mt-1">Instant access with a prepaid code</p>
             </div>
-            <div className="rounded-2xl p-4 text-center relative overflow-hidden"
+            <div className="rounded-2xl p-5 text-center relative overflow-hidden"
               style={{ background: 'rgba(244,120,32,0.06)', border: '1px dashed rgba(244,120,32,0.3)' }}>
               <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'repeating-linear-gradient(45deg,#F47820 0,#F47820 1px,transparent 0,transparent 50%)', backgroundSize: '12px 12px' }} />
-              <Ticket size={32} color="rgba(244,120,32,0.5)" className="mx-auto mb-2" />
+              <Ticket size={40} color="rgba(244,120,32,0.5)" className="mx-auto mb-2" />
               <p className="text-xs text-blue-200/45 relative">Vouchers available at DirectCore service points & authorized agents</p>
             </div>
             <div>
               <label className="text-xs text-orange-400/80 mb-1.5 block font-semibold uppercase tracking-wider">Voucher Code</label>
               <input
-                className="portal-input text-center tracking-[0.25em] sm:tracking-[0.35em] text-base sm:text-lg font-mono"
+                className="portal-input text-center tracking-[0.35em] text-lg font-mono"
                 placeholder="XXXX-XXXX-XXXX"
                 value={form.voucher}
                 onChange={e => set('voucher', e.target.value.toUpperCase())}
                 maxLength={14}
               />
             </div>
+            {/* Paste demo codes */}
             <div className="flex flex-wrap gap-2">
               <p className="text-xs text-blue-200/30 w-full">Try demo codes:</p>
               {['DC10-FREE-HOUR', 'DC20-DEMO-WIFI'].map(c => (
@@ -407,7 +391,7 @@ export default function AuthPage() {
                 </button>
               ))}
             </div>
-            <button className="btn-primary w-full" onClick={handleSubmit} disabled={loading}>
+            <button className="btn-primary" onClick={handleSubmit} disabled={loading}>
               {loading
                 ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Activating...</span>
                 : <span className="flex items-center justify-center gap-2"><Zap size={16} />Activate & Connect</span>}
@@ -419,7 +403,7 @@ export default function AuthPage() {
         )}
 
         {/* Footer */}
-        <p className="mt-6 lg:mt-8 text-xs text-blue-200/20 text-center">
+        <p className="mt-8 text-xs text-blue-200/20 text-center">
           © 2026 DirectCore · By connecting you accept our terms of use
         </p>
       </div>
