@@ -92,6 +92,44 @@ function TelkomIcon({ color, size = 28 }) {
   )
 }
 
+/* ─── Responsive grid styles ──────────────────────────────────────────────── */
+const gridStyle = `
+  .provider-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .why-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(4, 1fr);
+  }
+  @media (max-width: 1024px) {
+    .provider-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .why-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (max-width: 640px) {
+    .provider-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .why-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (max-width: 380px) {
+    .provider-grid {
+      grid-template-columns: 1fr;
+    }
+    .why-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+`
+
 /* ─── Code modal ──────────────────────────────────────────────────────────── */
 function CodeModal({ provider, onConfirm, onClose }) {
   const [code, setCode]       = useState('')
@@ -112,12 +150,12 @@ function CodeModal({ provider, onConfirm, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       style={{ background: 'rgba(10,24,69,0.52)', backdropFilter: 'blur(8px)' }}
       onClick={e => { if (e.target === e.currentTarget && !loading) onClose() }}
     >
       <div
-        className="w-full max-w-md rounded-2xl overflow-hidden animate-slide-up"
+        className="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl overflow-hidden animate-slide-up"
         style={{
           background: 'var(--bg-card)',
           border: '1px solid var(--border-strong)',
@@ -127,15 +165,20 @@ function CodeModal({ provider, onConfirm, onClose }) {
         {/* Accent bar */}
         <div style={{ height: 4, background: `linear-gradient(90deg, ${provider.color}, ${provider.color}60)` }} />
 
-        <div className="p-6">
+        {/* Mobile drag handle */}
+        <div className="flex justify-center pt-3 sm:hidden">
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border-strong)' }} />
+        </div>
+
+        <div className="p-5 sm:p-6">
           {/* Header */}
           <div className="flex items-start justify-between mb-5">
-            <div className="flex items-center gap-3.5">
+            <div className="flex items-center gap-3">
               <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+                className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
                 style={{ background: provider.bg, border: `1.5px solid ${provider.border}` }}
               >
-                <Icon color={provider.color} size={26} />
+                <Icon color={provider.color} size={24} />
               </div>
               <div>
                 <p
@@ -151,7 +194,7 @@ function CodeModal({ provider, onConfirm, onClose }) {
             </div>
             <button
               onClick={onClose} disabled={loading}
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
               style={{ background: 'var(--bg-card2)', color: 'var(--text-muted)' }}
             >
               <X size={14} />
@@ -195,7 +238,7 @@ function CodeModal({ provider, onConfirm, onClose }) {
               onKeyDown={e => { if (e.key === 'Enter') handleSubmit(); if (e.key === 'Escape' && !loading) onClose() }}
               placeholder="e.g. ISP-AB12-XY99"
               className="flex-1 bg-transparent outline-none text-sm font-mono"
-              style={{ color: 'var(--text-main)', letterSpacing: '0.14em' }}
+              style={{ color: 'var(--text-main)', letterSpacing: '0.14em', minWidth: 0 }}
               maxLength={24}
               disabled={loading}
             />
@@ -215,7 +258,7 @@ function CodeModal({ provider, onConfirm, onClose }) {
             <button
               onClick={onClose} disabled={loading}
               className="btn-ghost flex-1"
-              style={{ padding: '10px 0', fontSize: 13, fontFamily: SERIF, letterSpacing: '0.01em' }}
+              style={{ padding: '11px 0', fontSize: 13, fontFamily: SERIF, letterSpacing: '0.01em' }}
             >
               Cancel
             </button>
@@ -223,7 +266,7 @@ function CodeModal({ provider, onConfirm, onClose }) {
               onClick={handleSubmit}
               disabled={loading || code.trim().length === 0}
               className="btn-primary flex-1"
-              style={{ padding: '10px 0', fontSize: 13, fontFamily: SERIF, letterSpacing: '0.01em' }}
+              style={{ padding: '11px 0', fontSize: 13, fontFamily: SERIF, letterSpacing: '0.01em' }}
             >
               {loading
                 ? <><Loader2 size={13} className="animate-spin" /> Linking…</>
@@ -262,22 +305,22 @@ function ProviderCard({ p, isLinked, isLinking, onLink, onUnlink }) {
         <div style={{ height: 3, background: `linear-gradient(90deg, ${p.color}, ${p.color}50)` }} />
       )}
 
-      <div className="p-4 flex flex-col gap-3 flex-1">
+      <div className="p-3 sm:p-4 flex flex-col gap-2.5 sm:gap-3 flex-1">
         {/* Icon + badge */}
         <div className="flex items-start justify-between">
           <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center"
+            className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{ background: p.bg, border: `1.5px solid ${p.border}` }}
           >
-            <Icon color={p.color} size={24} />
+            <Icon color={p.color} size={22} />
           </div>
           {isLinked && (
             <div
-              className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-semibold"
-              style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', fontFamily: SERIF }}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-xs font-semibold"
+              style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', fontFamily: SERIF, fontSize: 10 }}
             >
-              <Check size={10} strokeWidth={2.5} />
-              Linked
+              <Check size={9} strokeWidth={2.5} />
+              <span className="hidden sm:inline">Linked</span>
             </div>
           )}
         </div>
@@ -286,17 +329,17 @@ function ProviderCard({ p, isLinked, isLinking, onLink, onUnlink }) {
         <div className="flex-1">
           <p
             className="font-bold leading-snug"
-            style={{ fontFamily: SERIF, fontSize: 15, color: 'var(--text-main)', letterSpacing: '-0.01em' }}
+            style={{ fontFamily: SERIF, fontSize: 14, color: 'var(--text-main)', letterSpacing: '-0.01em' }}
           >
             {p.name}
           </p>
           <span
-            className="inline-block text-xs px-2 py-0.5 rounded-md font-medium mt-1.5"
-            style={{ background: p.bg, color: p.textColor, border: `1px solid ${p.border}`, fontFamily: SERIF }}
+            className="inline-block text-xs px-1.5 py-0.5 rounded-md font-medium mt-1"
+            style={{ background: p.bg, color: p.textColor, border: `1px solid ${p.border}`, fontFamily: SERIF, fontSize: 10 }}
           >
             {p.type}
           </span>
-          <p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--text-muted)', fontSize: 11 }}>
             <span style={{ color: p.color }}>📍</span>
             {p.coverage}
           </p>
@@ -312,6 +355,7 @@ function ProviderCard({ p, isLinked, isLinking, onLink, onUnlink }) {
               color: '#dc2626',
               border: '1px solid rgba(239,68,68,0.2)',
               fontFamily: SERIF,
+              fontSize: 12,
             }}
             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.15)' }}
             onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.08)' }}
@@ -328,6 +372,7 @@ function ProviderCard({ p, isLinked, isLinking, onLink, onUnlink }) {
               color: isLinking ? p.color : 'var(--text-sub)',
               border: `1px solid ${isLinking ? p.border : 'var(--border)'}`,
               fontFamily: SERIF,
+              fontSize: 12,
             }}
             onMouseEnter={e => {
               if (!isLinking) {
@@ -346,7 +391,7 @@ function ProviderCard({ p, isLinked, isLinking, onLink, onUnlink }) {
           >
             {isLinking
               ? <><Loader2 size={11} className="animate-spin" /> Linking…</>
-              : <><Plus size={11} strokeWidth={2.5} /> Link Provider</>
+              : <><Plus size={11} strokeWidth={2.5} /> Link</>
             }
           </button>
         )}
@@ -392,132 +437,135 @@ export default function LinkProviderPage() {
   }
 
   return (
-    <div className="animate-fade-in" style={{ maxWidth: 920 }}>
+    <>
+      <style>{gridStyle}</style>
+      <div className="animate-fade-in" style={{ maxWidth: 920 }}>
 
-      {/* ── Page header ── */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2.5 mb-1">
-          <Wifi size={20} color="var(--orange)" />
-          <h1
-            className="font-extrabold"
-            style={{ fontFamily: SERIF, fontSize: 28, color: 'var(--text-main)', letterSpacing: '-0.02em' }}
-          >
-            Link Provider
-          </h1>
-        </div>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          Connect additional ISPs for failover, unified billing and smart switching
-        </p>
-        <div
-          className="mt-4 h-0.5 w-9 rounded-full"
-          style={{ background: 'linear-gradient(90deg, var(--orange), var(--orange-light))' }}
-        />
-      </div>
-
-      {/* ── Search + counter ── */}
-      <div className="flex items-center gap-3 mb-4">
-        <div
-          className="flex items-center gap-2.5 flex-1 rounded-xl px-3.5 py-2.5"
-          style={{ background: 'var(--bg-card)', border: '1.5px solid var(--border-strong)', boxShadow: 'var(--shadow)' }}
-        >
-          <Search size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-          <input
-            className="flex-1 bg-transparent outline-none text-sm"
-            style={{ color: 'var(--text-main)' }}
-            placeholder="Search by name, type or coverage…"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
+        {/* ── Page header ── */}
+        <div className="mb-5 sm:mb-6">
+          <div className="flex items-center gap-2.5 mb-1">
+            <Wifi size={20} color="var(--orange)" />
+            <h1
+              className="font-extrabold"
+              style={{ fontFamily: SERIF, fontSize: 'clamp(22px, 5vw, 28px)', color: 'var(--text-main)', letterSpacing: '-0.02em' }}
+            >
+              Link Provider
+            </h1>
+          </div>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            Connect additional ISPs for failover, unified billing and smart switching
+          </p>
+          <div
+            className="mt-4 h-0.5 w-9 rounded-full"
+            style={{ background: 'linear-gradient(90deg, var(--orange), var(--orange-light))' }}
           />
-          {query && (
-            <button onClick={() => setQuery('')} style={{ color: 'var(--text-muted)' }}>
-              <X size={12} />
-            </button>
-          )}
         </div>
-        <div
-          className="px-3.5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 flex-shrink-0"
-          style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', fontFamily: SERIF }}
-        >
-          <Check size={11} strokeWidth={2.5} />
-          {linked.length} / {ALL_PROVIDERS.length} linked
-        </div>
-      </div>
 
-      {/* ── Filter pills ── */}
-      <div className="flex items-center gap-2 mb-5 flex-wrap">
-        {types.map(t => (
-          <button
-            key={t}
-            onClick={() => setActiveFilter(t)}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
-            style={activeFilter === t
-              ? { fontFamily: SERIF, background: 'linear-gradient(135deg, var(--orange), var(--orange-dark))', color: 'white', boxShadow: '0 2px 8px rgba(244,120,32,0.3)', border: 'none' }
-              : { fontFamily: SERIF, background: 'var(--bg-card)', color: 'var(--text-sub)', border: '1px solid var(--border)' }
-            }
+        {/* ── Search + counter ── */}
+        <div className="flex items-center gap-2.5 mb-4">
+          <div
+            className="flex items-center gap-2.5 flex-1 rounded-xl px-3.5 py-2.5"
+            style={{ background: 'var(--bg-card)', border: '1.5px solid var(--border-strong)', boxShadow: 'var(--shadow)', minWidth: 0 }}
           >
-            {t}
-          </button>
-        ))}
-      </div>
-
-      {/* ── 4-col grid ── */}
-      {filtered.length > 0 ? (
-        <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-          {filtered.map(p => (
-            <ProviderCard
-              key={p.id} p={p}
-              isLinked={linked.includes(p.id)}
-              isLinking={linking === p.id}
-              onLink={setModal}
-              onUnlink={unlink}
+            <Search size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+            <input
+              className="flex-1 bg-transparent outline-none text-sm"
+              style={{ color: 'var(--text-main)', minWidth: 0 }}
+              placeholder="Search providers…"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
             />
+            {query && (
+              <button onClick={() => setQuery('')} style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+                <X size={12} />
+              </button>
+            )}
+          </div>
+          <div
+            className="px-2.5 sm:px-3.5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 flex-shrink-0"
+            style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', fontFamily: SERIF }}
+          >
+            <Check size={11} strokeWidth={2.5} />
+            <span>{linked.length}<span className="hidden sm:inline"> / {ALL_PROVIDERS.length} linked</span></span>
+          </div>
+        </div>
+
+        {/* ── Filter pills ── */}
+        <div className="flex items-center gap-1.5 sm:gap-2 mb-4 sm:mb-5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          {types.map(t => (
+            <button
+              key={t}
+              onClick={() => setActiveFilter(t)}
+              className="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 whitespace-nowrap flex-shrink-0"
+              style={activeFilter === t
+                ? { fontFamily: SERIF, background: 'linear-gradient(135deg, var(--orange), var(--orange-dark))', color: 'white', boxShadow: '0 2px 8px rgba(244,120,32,0.3)', border: 'none' }
+                : { fontFamily: SERIF, background: 'var(--bg-card)', color: 'var(--text-sub)', border: '1px solid var(--border)' }
+              }
+            >
+              {t}
+            </button>
           ))}
         </div>
-      ) : (
-        <div
-          className="rounded-2xl p-12 text-center mb-5 flex flex-col items-center gap-3"
-          style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-        >
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'var(--bg-card2)' }}>
-            <Search size={22} style={{ color: 'var(--text-muted)' }} />
-          </div>
-          <p className="text-sm font-semibold" style={{ fontFamily: SERIF, color: 'var(--text-sub)' }}>
-            No providers match "{query || activeFilter}"
-          </p>
-          <button
-            onClick={() => { setQuery(''); setActiveFilter('All') }}
-            className="btn-outline text-xs"
-            style={{ padding: '8px 18px', fontFamily: SERIF }}
-          >
-            Clear filters
-          </button>
-        </div>
-      )}
 
-      {/* ── Why link strip ── */}
-      <div className="grid grid-cols-4 gap-3">
-        {WHY_LINK.map(({ icon, text }) => (
+        {/* ── Responsive grid ── */}
+        {filtered.length > 0 ? (
+          <div className="provider-grid mb-4 sm:mb-5">
+            {filtered.map(p => (
+              <ProviderCard
+                key={p.id} p={p}
+                isLinked={linked.includes(p.id)}
+                isLinking={linking === p.id}
+                onLink={setModal}
+                onUnlink={unlink}
+              />
+            ))}
+          </div>
+        ) : (
           <div
-            key={text}
-            className="rounded-xl p-3.5 flex flex-col gap-2"
-            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-orange)' }}
+            className="rounded-2xl p-8 sm:p-12 text-center mb-5 flex flex-col items-center gap-3"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
           >
-            <span style={{ fontSize: 18 }}>{icon}</span>
-            <p className="text-xs leading-relaxed" style={{ fontFamily: SERIF, color: 'var(--text-sub)' }}>
-              {text}
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'var(--bg-card2)' }}>
+              <Search size={22} style={{ color: 'var(--text-muted)' }} />
+            </div>
+            <p className="text-sm font-semibold" style={{ fontFamily: SERIF, color: 'var(--text-sub)' }}>
+              No providers match "{query || activeFilter}"
             </p>
+            <button
+              onClick={() => { setQuery(''); setActiveFilter('All') }}
+              className="btn-outline text-xs"
+              style={{ padding: '8px 18px', fontFamily: SERIF }}
+            >
+              Clear filters
+            </button>
           </div>
-        ))}
-      </div>
+        )}
 
-      {/* ── Modal ── */}
-      {modal && (
-        <CodeModal
-          provider={modal}
-          onConfirm={() => confirmLink(modal)}
-          onClose={() => setModal(null)}
-        />
-      )}
-    </div>
+        {/* ── Why link strip ── */}
+        <div className="why-grid">
+          {WHY_LINK.map(({ icon, text }) => (
+            <div
+              key={text}
+              className="rounded-xl p-3 sm:p-3.5 flex flex-col gap-1.5 sm:gap-2"
+              style={{ background: 'var(--bg-card)', border: '1px solid var(--border-orange)' }}
+            >
+              <span style={{ fontSize: 16 }}>{icon}</span>
+              <p className="text-xs leading-relaxed" style={{ fontFamily: SERIF, color: 'var(--text-sub)' }}>
+                {text}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Modal ── */}
+        {modal && (
+          <CodeModal
+            provider={modal}
+            onConfirm={() => confirmLink(modal)}
+            onClose={() => setModal(null)}
+          />
+        )}
+      </div>
+    </>
   )
 }

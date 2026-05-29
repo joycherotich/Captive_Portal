@@ -29,7 +29,7 @@ function MpesaForm({ plan, onSuccess }) {
         <Smartphone size={32} color="#00A651"/>
       </div>
       <div>
-        <h3 className="font-black text-lg mb-1" style={{fontFamily:'Syne,sans-serif',color:'var(--text-main)'}}>STK Push Sent!</h3>
+        <h3 className="font-black text-lg mb-1" style={{fontFamily:'serif',color:'var(--text-main)'}}>STK Push Sent!</h3>
         <p className="text-sm mb-1" style={{color:'var(--text-muted)'}}>Check your phone <strong style={{color:'var(--text-main)'}}>{phone}</strong></p>
         <p className="text-sm" style={{color:'var(--text-muted)'}}>Enter your M-Pesa PIN to confirm <strong style={{color:'#00A651'}}>KES {plan?.price}</strong></p>
       </div>
@@ -98,7 +98,7 @@ function PesaPalForm({ plan, onSuccess }) {
       <div className="rounded-2xl overflow-hidden" style={{border:'1.5px solid #1B3A8F30'}}>
         <div className="px-4 py-3 flex items-center justify-between" style={{background:'linear-gradient(135deg,#1B3A8F,#2E54C4)'}}>
           <div className="flex items-center gap-2">
-            <span className="text-white font-black text-lg" style={{fontFamily:'Syne,sans-serif'}}>PesaPal</span>
+            <span className="text-white font-black text-lg" style={{fontFamily:'serif'}}>PesaPal</span>
             <span className="text-xs text-blue-200/60 font-medium">Secure Checkout</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-green-300/80">
@@ -178,7 +178,7 @@ function PayPalForm({ plan, onSuccess }) {
           {/* Amount display */}
           <div className="text-center py-3 rounded-xl" style={{background:'#F0F5FF',border:'1px solid #C7D7F5'}}>
             <p className="text-xs mb-1" style={{color:'#4A5B8C'}}>You are paying</p>
-            <p className="text-2xl font-black" style={{color:'#003087',fontFamily:'Syne,sans-serif'}}>KES {plan?.price}</p>
+            <p className="text-2xl font-black" style={{color:'#003087',fontFamily:'serif'}}>KES {plan?.price}</p>
             <p className="text-xs mt-0.5" style={{color:'#9DB0CC'}}>to DirectCore WiFi Portal</p>
           </div>
           <div>
@@ -233,7 +233,7 @@ export default function PaymentPage() {
       <div className="w-20 h-20 rounded-full flex items-center justify-center mb-5" style={{background:'linear-gradient(135deg,#F47820,#D4631A)',boxShadow:'0 0 40px rgba(244,120,32,0.4)'}}>
         <CheckCircle2 size={40} color="white"/>
       </div>
-      <h2 className="text-3xl font-black mb-2" style={{fontFamily:'Syne,sans-serif',color:'var(--text-main)'}}>Payment Confirmed!</h2>
+      <h2 className="text-3xl font-black mb-2" style={{fontFamily:'serif',color:'var(--text-main)'}}>Payment Confirmed!</h2>
       <p className="mb-2" style={{color:'var(--text-muted)'}}>Your <strong style={{color:'var(--text-main)'}}>{activePlan?.name}</strong> plan is now active.</p>
       <p className="text-sm mb-6" style={{color:'var(--text-muted)'}}>Enjoy {activePlan?.data} at {activePlan?.speed} for {activePlan?.period}.</p>
       <div className="w-full rounded-2xl p-4 mb-6" style={{background:'rgba(244,120,32,0.06)',border:'1.5px solid rgba(244,120,32,0.2)'}}>
@@ -265,7 +265,7 @@ export default function PaymentPage() {
         </div>
       </div>
 
-      <h1 className="text-3xl font-black mb-1" style={{fontFamily:'Syne,sans-serif',color:'var(--text-main)'}}>Complete Payment</h1>
+      <h1 className="text-3xl font-black mb-1" style={{fontFamily:'serif',color:'var(--text-main)'}}>Complete Payment</h1>
       <p className="text-sm mb-6" style={{color:'var(--text-muted)'}}>Choose your preferred payment method below</p>
 
       {/* Plan summary */}
@@ -278,7 +278,7 @@ export default function PaymentPage() {
           <p className="text-xs" style={{color:'var(--text-muted)'}}>{activePlan?.speed} · {activePlan?.data} data</p>
         </div>
         <div className="text-right">
-          <p className="text-xl font-black" style={{fontFamily:'Syne,sans-serif',color:'var(--orange)'}}>KES {activePlan?.price}</p>
+          <p className="text-xl font-black" style={{fontFamily:'serif',color:'var(--orange)'}}>KES {activePlan?.price}</p>
           <p className="text-xs" style={{color:'var(--text-muted)'}}>one-time</p>
         </div>
       </div>
@@ -290,7 +290,7 @@ export default function PaymentPage() {
             className="p-3 rounded-2xl text-center transition-all"
             style={method===m.id?{background:'white',border:`2px solid ${m.color}`,boxShadow:`0 4px 16px ${m.color}22`}:{background:'white',border:'1.5px solid var(--border)'}}>
             <div className="text-2xl mb-1">{m.logo}</div>
-            <p className="text-xs font-black" style={{color:method===m.id?m.color:'var(--text-muted)',fontFamily:'Syne,sans-serif'}}>{m.label}</p>
+            <p className="text-xs font-black" style={{color:method===m.id?m.color:'var(--text-muted)',fontFamily:'serif'}}>{m.label}</p>
           </button>
         ))}
       </div>
