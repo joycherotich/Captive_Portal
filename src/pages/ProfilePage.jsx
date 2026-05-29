@@ -1,15 +1,194 @@
 import { useState } from 'react'
-import { User, Mail, Phone, MapPin, Camera, Shield, Bell, Lock, ChevronRight, Check, Edit3, Zap, Globe, Star, Activity } from 'lucide-react'
+import { User, Mail, Phone, MapPin, Camera, Shield, Bell, Lock, ChevronRight, Check, Edit3, Zap, Star, Activity } from 'lucide-react'
 import { useApp } from '../context/AppContext'
+
+const css = `
+  @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.7;transform:scale(1.3)} }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  .pf-wrap { animation: fadeUp .4s ease both; max-width: 740px; width: 100%; box-sizing: border-box; }
+
+  /* hero card */
+  .pf-hero { border-radius: 22px; overflow: hidden; margin-bottom: 16px;
+    background: var(--bg-card); border: 1px solid var(--border); box-shadow: var(--shadow-md); }
+
+  .pf-banner {
+    height: 130px; position: relative; overflow: hidden;
+    background: #111827;
+  }
+  .pf-banner-inner {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 55% 90% at 92% 50%, rgba(244,120,32,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 70% at 50% 130%, rgba(244,120,32,0.1) 0%, transparent 60%);
+  }
+  .pf-banner-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  .pf-banner-shine {
+    position: absolute; inset: 0;
+    background: linear-gradient(160deg, rgba(255,255,255,0.05) 0%, transparent 50%);
+  }
+
+  .pf-body { padding: 0 24px 24px; }
+
+  .pf-avatar-row { display: flex; align-items: center; gap: 16px; margin-top: 0; margin-bottom: 18px; flex-wrap: wrap; }
+
+  .pf-avatar {
+    width: 88px; height: 88px; border-radius: 22px; flex-shrink: 0;
+    background: linear-gradient(145deg, #F47820 0%, #B8490E 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: 800; color: white;
+    font-family: var(--font-display); letter-spacing: -0.02em;
+    box-shadow: 0 0 0 4px var(--bg-card), 0 12px 40px rgba(244,120,32,0.4);
+    position: relative;
+  }
+  .pf-cam-btn {
+    position: absolute; bottom: -7px; right: -7px;
+    width: 28px; height: 28px; border-radius: 9px;
+    border: 3px solid var(--bg-card);
+    background: #2563EB;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: transform .15s;
+  }
+  .pf-cam-btn:hover { transform: scale(1.12); }
+
+  .pf-meta { flex: 1; min-width: 0; padding-bottom: 4px; }
+  .pf-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 3px; }
+  .pf-name { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -0.03em; color: var(--text-main); font-family: var(--font-display); word-break: break-word; }
+  .pf-verified { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700;
+    padding: 3px 9px; border-radius: 20px; background: rgba(244,120,32,0.1); color: #F47820;
+    border: 1px solid rgba(244,120,32,0.22); font-family: var(--font-display); flex-shrink: 0; }
+  .pf-email { margin: 0; font-size: 13px; color: var(--text-muted); word-break: break-all; }
+
+  .pf-status {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 13px; border-radius: 20px;
+    background: rgba(22,163,74,0.08); border: 1px solid rgba(22,163,74,0.2);
+    margin-bottom: 4px; flex-shrink: 0;
+  }
+  .pf-dot { width: 7px; height: 7px; border-radius: 50%; background: #16A34A;
+    box-shadow: 0 0 0 2.5px rgba(22,163,74,0.25); animation: pulse-dot 2.2s infinite; }
+  .pf-status-label { font-size: 12px; font-weight: 700; color: #16A34A; font-family: var(--font-display); }
+
+  /* divider */
+  .pf-divider { height: 1px; background: var(--border); margin: 0 0 18px; }
+
+  /* stats */
+  .pf-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+  .pf-stat {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 14px;
+    padding: 13px 14px; display: flex; align-items: center; gap: 12px;
+  }
+  .pf-stat-icon { width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .pf-stat-label { margin: 0; font-size: 11px; color: var(--text-muted); }
+  .pf-stat-value { margin: 2px 0 0; font-size: 13px; font-weight: 700; color: var(--text-main);
+    font-family: var(--font-display); letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* section card */
+  .pf-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px;
+    box-shadow: var(--shadow); margin-bottom: 16px; overflow: hidden; }
+  .pf-card-head { padding: 17px 22px 15px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .pf-card-title { margin: 0; font-size: 14px; font-weight: 700; color: var(--text-main);
+    font-family: var(--font-display); letter-spacing: -0.01em; }
+  .pf-card-sub { margin: 2px 0 0; font-size: 12px; color: var(--text-muted); }
+  .pf-editing-badge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 8px;
+    background: rgba(244,120,32,0.1); color: #F47820; border: 1px solid rgba(244,120,32,0.2);
+    font-family: var(--font-display); flex-shrink: 0; }
+
+  /* form */
+  .pf-form { padding: 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+  .pf-field-label { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; font-family: var(--font-display); }
+  .pf-input-wrap { position: relative; }
+  .pf-input-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+
+  /* settings */
+  .pf-settings-list { padding: 8px 10px; }
+  .pf-setting-btn {
+    width: 100%; display: flex; align-items: center; gap: 14px;
+    padding: 11px 13px; border-radius: 13px; border: none;
+    background: transparent; cursor: pointer; text-align: left; transition: background .15s;
+  }
+  .pf-setting-btn:hover { background: var(--bg); }
+  .pf-setting-icon { width: 40px; min-width: 40px; height: 40px; border-radius: 11px;
+    background: var(--bg); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; }
+  .pf-setting-label { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-main);
+    font-family: var(--font-display); }
+  .pf-setting-sub { margin: 2px 0 0; font-size: 12px; color: var(--text-muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* danger */
+  .pf-danger { margin: 4px 18px 18px; padding: 14px 18px; border-radius: 14px;
+    background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.12);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .pf-danger-title { margin: 0; font-size: 13px; font-weight: 700; color: #EF4444; font-family: var(--font-display); }
+  .pf-danger-sub { margin: 2px 0 0; font-size: 12px; color: var(--text-muted); }
+  .pf-danger-btn {
+    font-size: 12px; font-weight: 700; padding: 7px 16px; border-radius: 10px;
+    background: transparent; color: #EF4444; border: 1px solid rgba(239,68,68,0.3);
+    cursor: pointer; font-family: var(--font-display); transition: all .2s; flex-shrink: 0;
+  }
+  .pf-danger-btn:hover { background: #EF4444; color: white; }
+
+  /* header */
+  .pf-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; gap: 12px; }
+  .pf-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.18em; color: #F47820;
+    text-transform: uppercase; font-family: var(--font-display); margin-bottom: 3px; }
+  .pf-h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; color: var(--text-main);
+    font-family: var(--font-display); margin: 0; }
+  .pf-edit-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px 20px; border-radius: 12px; border: none;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    font-family: var(--font-display); transition: all .2s; white-space: nowrap; flex-shrink: 0;
+  }
+  .pf-edit-btn.saving {
+    background: linear-gradient(135deg,#F47820,#C75C10); color: white;
+    box-shadow: 0 4px 18px rgba(244,120,32,0.38);
+  }
+  .pf-edit-btn.idle {
+    background: var(--bg-card); color: var(--text-sub);
+    border: 1.5px solid var(--border); box-shadow: var(--shadow);
+  }
+
+  /* responsive */
+  @media (max-width:600px) {
+    .pf-header { flex-direction: column; align-items: flex-start; }
+    .pf-edit-btn { width: 100%; }
+    .pf-avatar { width: 70px !important; height: 70px !important; font-size: 22px !important; border-radius: 18px !important; }
+    .pf-body { padding: 0 16px 20px !important; }
+    .pf-stats { grid-template-columns: 1fr !important; }
+    .pf-form { grid-template-columns: 1fr !important; padding: 16px !important; }
+    .pf-form-full { grid-column: auto !important; }
+    .pf-card-head { padding: 14px 16px 12px !important; }
+    .pf-settings-list { padding: 6px 8px !important; }
+    .pf-danger { flex-direction: column; align-items: flex-start; margin: 4px 12px 16px !important; }
+    .pf-danger-btn { width: 100%; text-align: center; }
+    .pf-name-row { gap: 6px; }
+    .pf-status { margin-bottom: 0 !important; align-self: flex-start; }
+  }
+  @media (min-width:601px) and (max-width:760px) {
+    .pf-stats { grid-template-columns: repeat(2,1fr) !important; }
+    .pf-form { grid-template-columns: 1fr !important; }
+    .pf-form-full { grid-column: auto !important; }
+  }
+`
 
 export default function ProfilePage() {
   const { user, showToast } = useApp()
   const [editing, setEditing] = useState(false)
   const [activeField, setActiveField] = useState(null)
   const [form, setForm] = useState({
-    name: user?.name || 'John Doe',
-    email: user?.email || 'john@example.com',
-    phone: user?.phone || '+254712345678',
+    name: user?.name || 'Joy Letim',
+    email: user?.email || 'joy@example.com',
+    phone: user?.phone || '+254742142959',
     location: 'Nairobi, Kenya',
     idNumber: 'KE1234567',
   })
@@ -19,211 +198,195 @@ export default function ProfilePage() {
   const initials = form.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
 
   const fields = [
-    { label: 'Full Name', key: 'name', icon: User, type: 'text' },
-    { label: 'Email Address', key: 'email', icon: Mail, type: 'email' },
-    { label: 'Phone Number', key: 'phone', icon: Phone, type: 'tel' },
-    { label: 'Location', key: 'location', icon: MapPin, type: 'text' },
-    { label: 'ID Number', key: 'idNumber', icon: Shield, type: 'text' },
+    { label: 'Full Name',     key: 'name',     icon: User,   type: 'text'  },
+    { label: 'Email Address', key: 'email',    icon: Mail,   type: 'email' },
+    { label: 'Phone Number',  key: 'phone',    icon: Phone,  type: 'tel'   },
+    { label: 'Location',      key: 'location', icon: MapPin, type: 'text'  },
+    { label: 'ID Number',     key: 'idNumber', icon: Shield, type: 'text'  },
+  ]
+
+  const stats = [
+    { icon: Zap,      label: 'Current Plan', value: user?.plan || 'Basic 10Mbps', color: '#F47820', bg: 'rgba(244,120,32,0.12)'  },
+    { icon: Activity, label: 'Data Used',    value: `${user?.dataUsed || 4.2} / ${user?.dataTotal || 10} GB`, color: '#3B82F6', bg: 'rgba(59,130,246,0.12)' },
+    { icon: Star,     label: 'Member Since', value: 'Jan 2026',                   color: '#8B5CF6', bg: 'rgba(139,92,246,0.12)' },
   ]
 
   const settings = [
-    { icon: Lock, label: 'Change Password', sub: 'Last changed 30 days ago', badge: null, badgeType: null },
-    { icon: Bell, label: 'Notifications', sub: 'Email & SMS alerts enabled', badge: '3', badgeType: 'blue' },
-    { icon: Shield, label: 'Two-Factor Auth', sub: 'Add extra security to your account', badge: 'Off', badgeType: 'orange' },
+    { icon: Lock,   label: 'Change Password', sub: 'Last changed 30 days ago',         badge: null,  badgeType: null },
+    { icon: Bell,   label: 'Notifications',   sub: 'Email & SMS alerts enabled',        badge: '3',   badgeType: 'blue' },
+    { icon: Shield, label: 'Two-Factor Auth', sub: 'Add extra security to your account',badge: 'Off', badgeType: 'orange' },
   ]
 
   return (
-    <div className="animate-fade-in" style={{ maxWidth: 740 }}>
+    <>
+      <style>{css}</style>
+      <div className="pf-wrap animate-fade-in">
 
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', color: 'var(--orange)', textTransform: 'uppercase', fontFamily: 'var(--font-display)', marginBottom: 4 }}>Account</p>
-          <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text-main)', fontFamily: 'var(--font-display)', margin: 0 }}>My Profile</h1>
-        </div>
-        <button
-          onClick={() => editing ? save() : setEditing(true)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '10px 20px', borderRadius: 12, border: 'none',
-            fontSize: 13, fontWeight: 700, cursor: 'pointer',
-            fontFamily: 'var(--font-display)', letterSpacing: '-0.01em',
-            transition: 'all 0.2s',
-            ...(editing
-              ? { background: 'linear-gradient(135deg,#F47820,#D4631A)', color: 'white', boxShadow: '0 4px 16px rgba(244,120,32,0.35)' }
-              : { background: 'var(--bg-card)', color: 'var(--text-sub)', border: '1.5px solid var(--border)', boxShadow: 'var(--shadow)' })
-          }}
-        >
-          {editing ? <><Check size={14} strokeWidth={3} /> Save Changes</> : <><Edit3 size={14} /> Edit Profile</>}
-        </button>
-      </div>
-
-      {/* ── Profile Hero Card ── */}
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 20, boxShadow: 'var(--shadow-md)', marginBottom: 16, overflow: 'hidden' }}>
-
-        {/* Banner */}
-        <div style={{ height: 110, position: 'relative', background: 'linear-gradient(120deg, #06102A 0%, #1B3A8F 55%, #c75e10 100%)', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle at 70% 50%, rgba(244,120,32,0.25) 0%, transparent 55%), radial-gradient(circle at 20% 80%, rgba(46,84,196,0.3) 0%, transparent 50%)' }} />
-          <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
+        {/* ── Page Header ── */}
+        <div className="pf-header">
+          <div>
+            <p className="pf-eyebrow">Account</p>
+            <h1 className="pf-h1">My Profile</h1>
+          </div>
+          <button
+            className={`pf-edit-btn ${editing ? 'saving' : 'idle'}`}
+            onClick={() => editing ? save() : setEditing(true)}
+          >
+            {editing
+              ? <><Check size={14} strokeWidth={3} /> Save Changes</>
+              : <><Edit3 size={14} /> Edit Profile</>}
+          </button>
         </div>
 
-        {/* Profile info row — avatar pulled up over banner */}
-        <div style={{ padding: '0 28px 24px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, marginTop: -36, marginBottom: 20 }}>
+        {/* ── Hero Card ── */}
+        <div className="pf-hero mt-4">
 
-            {/* Avatar */}
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-              <div style={{
-                width: 80, height: 80, borderRadius: 20,
-                background: 'linear-gradient(135deg, #F47820, #D4631A)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 26, fontWeight: 800, color: 'white',
-                fontFamily: 'var(--font-display)', letterSpacing: '-0.02em',
-                boxShadow: '0 0 0 4px var(--bg-card), 0 8px 32px rgba(244,120,32,0.45)',
-              }}>{initials}</div>
-              <button style={{
-                position: 'absolute', bottom: -6, right: -6,
-                width: 26, height: 26, borderRadius: 8, border: '2.5px solid var(--bg-card)',
-                background: 'var(--blue)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', transition: 'transform 0.2s',
-              }}
-              onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
-              onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-              ><Camera size={11} color="white" /></button>
-            </div>
 
-            {/* Name + meta */}
-            <div style={{ flex: 1, paddingBottom: 4 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 3 }}>
-                <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: '-0.025em', color: 'var(--text-main)', fontFamily: 'var(--font-display)' }}>{form.name}</h2>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: 'rgba(244,120,32,0.1)', color: 'var(--orange)', border: '1px solid rgba(244,120,32,0.25)', fontFamily: 'var(--font-display)' }}>
-                  <Shield size={9} strokeWidth={3} /> Verified
-                </span>
+          {/* Content */}
+          <div className="pf-body" style={{ padding: '24px 24px 24px' }}>
+            <div className="pf-avatar-row">
+              {/* Avatar */}
+              <div className="pf-avatar">
+                {initials}
+                <button className="pf-cam-btn" aria-label="Change photo">
+                  <Camera size={11} color="white" strokeWidth={2.5} />
+                </button>
               </div>
-              <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>{form.email}</p>
+
+              {/* Name / email */}
+              <div className="pf-meta mt-6">
+                <div className="pf-name-row">
+                  <h2 className="pf-name">{form.name}</h2>
+                  <span className="pf-verified">
+                    <Shield size={9} strokeWidth={3} /> Verified
+                  </span>
+                </div>
+                <p className="pf-email">{form.email}</p>
+              </div>
+
+              {/* Active */}
+              <div className="pf-status mt-6">
+                <span className="pf-dot" />
+                <span className="pf-status-label">Active</span>
+              </div>
             </div>
 
-            {/* Active badge — right aligned, stays in content area */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 20, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', marginBottom: 4 }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22C55E', display: 'inline-block', boxShadow: '0 0 0 2px rgba(34,197,94,0.3)', animation: 'sPulse 2s infinite' }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#22C55E', fontFamily: 'var(--font-display)' }}>Active</span>
+            <div className="pf-divider" />
+
+            {/* Stats */}
+            <div className="pf-stats">
+              {stats.map(({ icon: Icon, label, value, color, bg }) => (
+                <div key={label} className="pf-stat">
+                  <div className="pf-stat-icon" style={{ background: bg }}>
+                    <Icon size={16} color={color} strokeWidth={2} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <p className="pf-stat-label">{label}</p>
+                    <p className="pf-stat-value">{value}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
+        </div>
 
-          {/* Stats strip */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-            {[
-              { icon: Zap, label: 'Current Plan', value: user?.plan || 'Basic 10Mbps', color: '#F47820', bg: 'rgba(244,120,32,0.1)' },
-              { icon: Activity, label: 'Data Used', value: `${user?.dataUsed || 4.2} / ${user?.dataTotal || 10} GB`, color: '#2E54C4', bg: 'rgba(46,84,196,0.1)' },
-              { icon: Star, label: 'Member Since', value: 'Jan 2024', color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)' },
-            ].map(({ icon: Icon, label, value, color, bg }) => (
-              <div key={label} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Icon size={15} color={color} strokeWidth={2} />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}>{label}</p>
-                  <p style={{ margin: '2px 0 0', fontSize: 13, fontWeight: 700, color: 'var(--text-main)', fontFamily: 'var(--font-display)', letterSpacing: '-0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</p>
+        {/* ── Personal Information ── */}
+        <div className="pf-card">
+          <div className="pf-card-head">
+            <div>
+              <h3 className="pf-card-title">Personal Information</h3>
+              <p className="pf-card-sub">Your account details and contact info</p>
+            </div>
+            {editing && <span className="pf-editing-badge">EDITING</span>}
+          </div>
+
+          <div className="pf-form">
+            {fields.map(({ label, key, icon: Icon, type }) => (
+              <div
+                key={key}
+                className={key === 'idNumber' ? 'pf-form-full' : ''}
+                style={key === 'idNumber' ? { gridColumn: '1 / -1' } : {}}
+              >
+                <label className="pf-field-label">{label}</label>
+                <div className="pf-input-wrap">
+                  <div className="pf-input-icon">
+                    <Icon
+                      size={14}
+                      color={activeField === key && editing ? '#F47820' : 'var(--text-muted)'}
+                      strokeWidth={2}
+                    />
+                  </div>
+                  <input
+                    type={type}
+                    value={form[key]}
+                    onChange={e => set(key, e.target.value)}
+                    onFocus={() => setActiveField(key)}
+                    onBlur={() => setActiveField(null)}
+                    disabled={!editing}
+                    className="portal-input"
+                    style={{
+                      paddingLeft: 38,
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      background: editing ? (activeField === key ? '#fff' : 'var(--bg)') : 'var(--bg)',
+                      opacity: editing ? 1 : 0.8,
+                      cursor: editing ? 'text' : 'default',
+                      fontFamily: 'var(--font-body)',
+                      fontSize: 14,
+                    }}
+                  />
                 </div>
               </div>
             ))}
           </div>
         </div>
-      </div>
 
-      {/* ── Personal Information ── */}
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 20, boxShadow: 'var(--shadow)', marginBottom: 16, overflow: 'hidden' }}>
-        <div style={{ padding: '18px 24px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-main)', fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}>Personal Information</h3>
-            <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>Your account details and contact info</p>
-          </div>
-          {editing && (
-            <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: 'rgba(244,120,32,0.1)', color: 'var(--orange)', border: '1px solid rgba(244,120,32,0.2)', fontFamily: 'var(--font-display)', letterSpacing: '0.02em' }}>EDITING</span>
-          )}
-        </div>
-
-        <div style={{ padding: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          {fields.map(({ label, key, icon: Icon, type }) => (
-            <div key={key} style={key === 'idNumber' ? { gridColumn: '1 / -1' } : {}}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6, fontFamily: 'var(--font-display)' }}>{label}</label>
-              <div style={{ position: 'relative' }}>
-                <div style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-                  <Icon size={14} color={activeField === key && editing ? 'var(--orange)' : 'var(--text-muted)'} strokeWidth={2} />
-                </div>
-                <input
-                  type={type}
-                  value={form[key]}
-                  onChange={e => set(key, e.target.value)}
-                  onFocus={() => setActiveField(key)}
-                  onBlur={() => setActiveField(null)}
-                  disabled={!editing}
-                  className="portal-input"
-                  style={{
-                    paddingLeft: 38,
-                    background: editing ? (activeField === key ? '#fff' : 'var(--bg)') : 'var(--bg)',
-                    opacity: editing ? 1 : 0.8,
-                    cursor: editing ? 'text' : 'default',
-                    fontFamily: 'var(--font-body)',
-                    fontSize: 14,
-                  }}
-                />
-              </div>
+        {/* ── Account Settings ── */}
+        <div className="pf-card" style={{ marginBottom: 0 }}>
+          <div className="pf-card-head">
+            <div>
+              <h3 className="pf-card-title">Account Settings</h3>
+              <p className="pf-card-sub">Security and notification preferences</p>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Account Settings ── */}
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 20, boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
-        <div style={{ padding: '18px 24px 16px', borderBottom: '1px solid var(--border)' }}>
-          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-main)', fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}>Account Settings</h3>
-          <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>Security and notification preferences</p>
-        </div>
-
-        <div style={{ padding: '8px 12px' }}>
-          {settings.map(({ icon: Icon, label, sub, badge, badgeType }) => (
-            <button key={label}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '12px 14px', borderRadius: 14, border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', transition: 'background 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-            >
-              <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--bg)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Icon size={16} color="var(--blue-light)" strokeWidth={1.8} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--text-main)', fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}>{label}</p>
-                <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>{sub}</p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {badge && (
-                  <span style={{
-                    fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 20,
-                    fontFamily: 'var(--font-display)',
-                    ...(badgeType === 'orange'
-                      ? { background: 'rgba(244,120,32,0.1)', color: 'var(--orange)', border: '1px solid rgba(244,120,32,0.2)' }
-                      : { background: 'rgba(46,84,196,0.1)', color: 'var(--blue-light)', border: '1px solid rgba(46,84,196,0.2)' })
-                  }}>{badge}</span>
-                )}
-                <ChevronRight size={15} color="var(--text-muted)" strokeWidth={2} />
-              </div>
-            </button>
-          ))}
-        </div>
-
-        {/* Danger zone */}
-        <div style={{ margin: '4px 20px 20px', padding: '14px 18px', borderRadius: 14, background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#EF4444', fontFamily: 'var(--font-display)' }}>Delete Account</p>
-            <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>Permanently remove your account and all data</p>
           </div>
-          <button
-            style={{ fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 10, background: 'transparent', color: '#EF4444', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer', fontFamily: 'var(--font-display)', transition: 'all 0.2s' }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#EF4444'; e.currentTarget.style.color = 'white' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#EF4444' }}
-          >Delete</button>
+
+          <div className="pf-settings-list">
+            {settings.map(({ icon: Icon, label, sub, badge, badgeType }) => (
+              <button key={label} className="pf-setting-btn">
+                <div className="pf-setting-icon">
+                  <Icon size={16} color="var(--blue-light)" strokeWidth={1.8} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p className="pf-setting-label">{label}</p>
+                  <p className="pf-setting-sub">{sub}</p>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+                  {badge && (
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 20,
+                      fontFamily: 'var(--font-display)',
+                      ...(badgeType === 'orange'
+                        ? { background:'rgba(244,120,32,0.1)', color:'#F47820', border:'1px solid rgba(244,120,32,0.2)' }
+                        : { background:'rgba(59,130,246,0.1)', color:'var(--blue-light)', border:'1px solid rgba(59,130,246,0.2)' })
+                    }}>{badge}</span>
+                  )}
+                  <ChevronRight size={15} color="var(--text-muted)" strokeWidth={2} />
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Danger zone */}
+          <div className="pf-danger">
+            <div>
+              <p className="pf-danger-title">Delete Account</p>
+              <p className="pf-danger-sub">Permanently remove your account and all data</p>
+            </div>
+            <button className="pf-danger-btn">Delete</button>
+          </div>
         </div>
+
       </div>
-    </div>
+    </>
   )
 }

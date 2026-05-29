@@ -135,7 +135,7 @@ export default function DashboardPage(){
           </div>
           <div className="mt-4 rounded-xl p-3 text-xs flex items-center gap-2" style={{background:'rgba(244,120,32,0.07)',border:'1px solid rgba(244,120,32,0.2)'}}>
             <AlertCircle size={13} color="#F47820"/>
-            <span style={{color:'var(--orange)'}}>Expires {user?.expiry||'2024-07-15'}</span>
+            <span style={{color:'var(--orange)'}}>Expires {user?.expiry||'2026-07-15'}</span>
           </div>
         </div>
       </div>

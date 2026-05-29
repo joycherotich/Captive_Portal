@@ -12,8 +12,8 @@ const FAQS=[
 ]
 
 const MY_TICKETS=[
-  {id:'TKT-001',title:'Slow speeds after 8pm',status:'resolved',date:'2024-06-25'},
-  {id:'TKT-002',title:'Billing discrepancy June',status:'open',date:'2024-06-28'},
+  {id:'TKT-001',title:'Slow speeds after 8pm',status:'resolved',date:'2026-04-25'},
+  {id:'TKT-002',title:'Billing discrepancy June',status:'open',date:'2026-05-28'},
 ]
 
 export default function SupportPage(){
