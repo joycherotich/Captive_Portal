@@ -1,174 +1,443 @@
 import { useState } from 'react'
-import { Ticket, Phone, ChevronDown, ChevronUp, MessageSquare, Check, AlertCircle, Send, X, Plus, CheckCircle } from 'lucide-react'
+import {
+  Ticket, Phone, ChevronDown, ChevronUp, MessageSquare,
+  AlertCircle, Send, X, Plus, CheckCircle
+} from 'lucide-react'
 import { useApp } from '../context/AppContext'
 
-const FAQS=[
-  {q:'How do I renew my plan?',a:'Go to Subscriptions → click Renew, or visit Packages to buy a new one. Payment via M-Pesa or card.'},
-  {q:'What happens when data runs out?',a:'Speed slows to 256Kbps. Purchase a top-up to restore full speed instantly.'},
-  {q:'How do I get a refund?',a:'Refund requests within 24h of purchase. Submit a ticket and we process within 2 business days.'},
-  {q:'Can I share my connection?',a:'Yes — Weekly plan supports 3 devices, Monthly supports 5. Check plan details under Subscriptions.'},
-  {q:'Why is my connection slow?',a:'Could be congestion, device, or distance from access point. Run a speed test and contact support if below plan speed.'},
-  {q:'How do I change my password?',a:'My Profile → Account Settings → Change Password. You will receive an OTP to your registered phone.'},
+const FAQS = [
+  { q: 'How do I renew my plan?',       a: 'Go to Subscriptions → click Renew, or visit Packages to buy a new one. Payment via M-Pesa or card.' },
+  { q: 'What happens when data runs out?', a: 'Speed slows to 256 Kbps. Purchase a top-up to restore full speed instantly.' },
+  { q: 'How do I get a refund?',        a: 'Refund requests within 24h of purchase. Submit a ticket and we process within 2 business days.' },
+  { q: 'Can I share my connection?',    a: 'Yes — Weekly plan supports 3 devices, Monthly supports 5. Check plan details under Subscriptions.' },
+  { q: 'Why is my connection slow?',    a: 'Could be congestion, device, or distance from access point. Run a speed test and contact support if below plan speed.' },
+  { q: 'How do I change my password?',  a: 'My Profile → Account Settings → Change Password. You will receive an OTP to your registered phone.' },
 ]
 
-const MY_TICKETS=[
-  {id:'TKT-001',title:'Slow speeds after 8pm',status:'resolved',date:'2026-04-25'},
-  {id:'TKT-002',title:'Billing discrepancy June',status:'open',date:'2026-05-28'},
+const MY_TICKETS = [
+  { id: 'TKT-001', title: 'Slow speeds after 8pm',      status: 'resolved', date: '2026-04-25' },
+  { id: 'TKT-002', title: 'Billing discrepancy June',   status: 'open',     date: '2026-05-28' },
 ]
 
-export default function SupportPage(){
-  const [tab,setTab]=useState('faqs')
-  const [openFaq,setOpenFaq]=useState(null)
-  const [showForm,setShowForm]=useState(false)
-  const [tf,setTf]=useState({title:'',category:'',message:''})
-  const [cbPhone,setCbPhone]=useState('')
-  const [cbTime,setCbTime]=useState('')
-  const [submitting,setSubmitting]=useState(false)
-  const {showToast}=useApp()
+const AMBER       = '#f59e0b'
+const AMBER_DARK  = '#d97706'
+const AMBER_BG    = 'rgba(245,158,11,0.10)'
+const AMBER_BOR   = 'rgba(245,158,11,0.20)'
 
-  const submitTicket=()=>{ setSubmitting(true); setTimeout(()=>{ setSubmitting(false); setShowForm(false); setTf({title:'',category:'',message:''}); showToast('Ticket created! We reply within 4 hours.','success') },1600) }
-  const requestCb=()=>{ setSubmitting(true); setTimeout(()=>{ setSubmitting(false); showToast('Callback scheduled!','success'); setCbPhone(''); setCbTime('') },1400) }
+/* ── Spinner ─────────────────────────────────────────── */
+function Spinner() {
+  return (
+    <span style={{
+      display: 'inline-block', width: 15, height: 15,
+      border: '2px solid rgba(255,255,255,0.25)',
+      borderTopColor: '#fff', borderRadius: '50%',
+      animation: 'spin .7s linear infinite',
+    }} />
+  )
+}
 
-  return(
-    <div className="animate-fade-in max-w-2xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-black" style={{fontFamily:'serif',color:'var(--text-main)'}}>Support</h1>
-        <p className="text-sm mt-1" style={{color:'var(--text-muted)'}}>FAQs, tickets, and callback requests</p>
+export default function SupportPage() {
+  const { showToast } = useApp()
+  const [tab,       setTab]       = useState('faqs')
+  const [openFaq,   setOpenFaq]   = useState(null)
+  const [showForm,  setShowForm]  = useState(false)
+  const [tf,        setTf]        = useState({ title: '', category: '', message: '' })
+  const [cbPhone,   setCbPhone]   = useState('')
+  const [cbDate,    setCbDate]    = useState('')
+  const [cbTime,    setCbTime]    = useState('')
+  const [submitting,setSubmitting]= useState(false)
+
+  const getTodayStr = () => {
+    const n = new Date()
+    return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`
+  }
+  const getMinTime = (d) => {
+    if (d === getTodayStr()) {
+      const n = new Date()
+      return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`
+    }
+    return '00:00'
+  }
+  const handleDateChange = (e) => {
+    setCbDate(e.target.value)
+    if (cbTime && cbTime < getMinTime(e.target.value)) setCbTime('')
+  }
+
+  const submitTicket = () => {
+    setSubmitting(true)
+    setTimeout(() => {
+      setSubmitting(false); setShowForm(false)
+      setTf({ title: '', category: '', message: '' })
+      showToast('Ticket created! We reply within 4 hours.', 'success')
+    }, 1600)
+  }
+
+  const requestCb = () => {
+    setSubmitting(true)
+    setTimeout(() => {
+      setSubmitting(false)
+      showToast('Callback scheduled!', 'success')
+      setCbPhone(''); setCbDate(''); setCbTime('')
+    }, 1400)
+  }
+
+  const cbReady   = cbPhone && cbDate && cbTime
+  const ticketOk  = tf.title.trim() && tf.message.trim()
+
+  const TABS = [
+    { id: 'faqs',     label: 'FAQs'       },
+    { id: 'tickets',  label: 'My Tickets' },
+    { id: 'callback', label: 'Callback'   },
+  ]
+
+  return (
+    // <div className="animate-fade-in" style={{ maxWidth: 860, width: '100%' }}>
+      <div className="animate-fade-in" style={{ width: '100%' }}>
+
+      {/* ── Header ── */}
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-main)', margin: 0, fontFamily: 'var(--font-display)' }}>
+          Support
+        </h1>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>
+          FAQs, tickets, and callback requests
+        </p>
       </div>
 
-      {/* Live chat bar */}
-      <div className="rounded-2xl p-4 mb-5 flex items-center gap-3" style={{background:'linear-gradient(135deg,rgba(27,58,143,0.06),rgba(244,120,32,0.04))',border:'1.5px solid rgba(244,120,32,0.2)'}}>
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:'rgba(244,120,32,0.1)'}}>
-          <MessageSquare size={18} color="#F47820"/>
+      {/* ── Live chat banner ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 14,
+        padding: '14px 18px', borderRadius: 14, marginBottom: 18,
+        background: 'white',
+        border: `1px solid ${AMBER_BOR}`,
+        boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+      }}>
+        <div style={{
+          width: 38, height: 38, borderRadius: 11, flexShrink: 0,
+          background: AMBER_BG, border: `1px solid ${AMBER_BOR}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <MessageSquare size={17} style={{ color: AMBER_DARK }} />
         </div>
-        <div className="flex-1">
-          <p className="text-sm font-bold" style={{color:'var(--text-main)'}}>Live Chat Available</p>
-          <p className="text-xs" style={{color:'var(--text-muted)'}}>Mon–Fri 8AM–8PM · Sat 9AM–5PM</p>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>Live Chat Available</p>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>Mon–Fri 8AM–8PM · Sat 9AM–5PM</p>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-green-500 status-pulse"/>
-          <span className="text-xs font-semibold" style={{color:'#00A651'}}>Online</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <div style={{
+            width: 8, height: 8, borderRadius: '50%',
+            background: '#10B981',
+            boxShadow: '0 0 0 0 rgba(16,185,129,0.5)',
+            animation: 'sPulse 2.2s ease-in-out infinite',
+          }} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#10B981' }}>Online</span>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-5">
-        {[{id:'faqs',l:'FAQs'},{id:'tickets',l:'My Tickets'},{id:'callback',l:'Callback'}].map(({id,l})=>(
-          <button key={id} onClick={()=>setTab(id)} className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
-            style={tab===id?{background:'linear-gradient(135deg,#F47820,#D4631A)',color:'white',boxShadow:'0 4px 12px rgba(244,120,32,0.3)'}:{background:'white',color:'var(--text-muted)',border:'1.5px solid var(--border)'}}>
-            {l}
-          </button>
-        ))}
+      {/* ── Tabs ── */}
+      <div style={{
+        display: 'flex', gap: 4,
+        background: 'rgba(0,0,0,0.04)', borderRadius: 13,
+        padding: 4, marginBottom: 18, width: 'fit-content',
+      }}>
+        {TABS.map(t => {
+          const active = tab === t.id
+          return (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{
+              padding: '8px 22px', borderRadius: 10, border: 'none',
+              background: active ? 'white' : 'transparent',
+              color: active ? 'var(--text-main)' : 'var(--text-muted)',
+              fontSize: 13, fontWeight: active ? 700 : 500,
+              cursor: 'pointer', transition: 'all 0.15s',
+              boxShadow: active ? '0 1px 4px rgba(0,0,0,0.09)' : 'none',
+              fontFamily: 'var(--font-display)',
+              borderBottom: active ? `2px solid ${AMBER}` : '2px solid transparent',
+            }}>
+              {t.label}
+            </button>
+          )
+        })}
       </div>
 
-      {tab==='faqs'&&(
-        <div className="card-elevated rounded-3xl p-2 space-y-0.5">
-          {FAQS.map((f,i)=>(
-            <div key={i} className="rounded-2xl overflow-hidden transition-all" style={{background:openFaq===i?'rgba(244,120,32,0.04)':'transparent'}}>
-              <button onClick={()=>setOpenFaq(openFaq===i?null:i)} className="w-full flex items-center gap-3 p-4 text-left hover:bg-orange-50 transition-all rounded-2xl">
-                <div className="flex-1">
-                  <p className="text-sm font-semibold" style={{color:'var(--text-main)'}}>{f.q}</p>
-                </div>
-                {openFaq===i?<ChevronUp size={16} style={{color:'var(--orange)'}}/>:<ChevronDown size={16} style={{color:'var(--text-muted)'}}/>}
-              </button>
-              {openFaq===i&&<div className="px-4 pb-4"><p className="text-sm leading-relaxed border-t pt-3" style={{color:'var(--text-sub)',borderColor:'rgba(244,120,32,0.15)'}}>{f.a}</p></div>}
-            </div>
-          ))}
+      {/* ══════════════════ FAQs ══════════════════ */}
+      {tab === 'faqs' && (
+        <div style={{
+          background: 'white', border: '1px solid var(--border)',
+          borderRadius: 18, overflow: 'hidden',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+        }}>
+          {FAQS.map((f, i) => {
+            const isOpen = openFaq === i
+            return (
+              <div key={i} style={{ borderBottom: i < FAQS.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
+                <button
+                  onClick={() => setOpenFaq(isOpen ? null : i)}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '16px 20px', border: 'none', cursor: 'pointer', textAlign: 'left',
+                    background: isOpen ? AMBER_BG : 'transparent',
+                    transition: 'background 0.15s', gap: 12,
+                  }}
+                  onMouseEnter={e => { if (!isOpen) e.currentTarget.style.background = 'rgba(0,0,0,0.02)' }}
+                  onMouseLeave={e => { if (!isOpen) e.currentTarget.style.background = 'transparent' }}
+                >
+                  <p style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-main)', margin: 0 }}>
+                    {f.q}
+                  </p>
+                  {isOpen
+                    ? <ChevronUp  size={16} style={{ color: AMBER_DARK, flexShrink: 0 }} />
+                    : <ChevronDown size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                  }
+                </button>
+                {isOpen && (
+                  <div style={{
+                    padding: '0 20px 16px',
+                    borderTop: `1px solid ${AMBER_BOR}`,
+                    background: AMBER_BG,
+                  }}>
+                    <p style={{ fontSize: 13.5, color: 'var(--text-sub)', margin: '12px 0 0', lineHeight: 1.65 }}>
+                      {f.a}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 
-      {tab==='tickets'&&(
+      {/* ══════════════════ Tickets ══════════════════ */}
+      {tab === 'tickets' && (
         <div>
-          <div className="flex justify-end mb-3">
-            <button onClick={()=>setShowForm(true)} className="btn-primary" style={{width:'auto',padding:'10px 16px',fontSize:'13px'}}>
-              <span className="flex items-center gap-1.5"><Plus size={14}/>New Ticket</span>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+            <button onClick={() => setShowForm(true)} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: `linear-gradient(135deg,${AMBER},${AMBER_DARK})`,
+              color: '#0a0a0a', border: 'none', borderRadius: 10,
+              padding: '9px 16px', fontSize: 13, fontWeight: 700,
+              cursor: 'pointer', boxShadow: '0 2px 8px rgba(245,158,11,0.28)',
+              fontFamily: 'var(--font-display)',
+            }}>
+              <Plus size={14} />New Ticket
             </button>
           </div>
-          <div className="card-elevated rounded-3xl p-3 space-y-1">
-            {MY_TICKETS.map(t=>(
-              <div key={t.id} className="flex items-center gap-4 p-3 rounded-2xl hover:bg-orange-50 transition-all cursor-pointer">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:t.status==='open'?'rgba(244,120,32,0.1)':'rgba(0,166,81,0.1)'}}>
-                  {t.status==='open'?<AlertCircle size={16} color="#F47820"/>:<CheckCircle size={16} color="#00A651"/>}
+
+          <div style={{
+            background: 'white', border: '1px solid var(--border)',
+            borderRadius: 18, overflow: 'hidden',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+          }}>
+            {MY_TICKETS.map((t, i) => {
+              const isOpen = t.status === 'open'
+              return (
+                <div key={t.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 14,
+                  padding: '14px 18px',
+                  borderBottom: i < MY_TICKETS.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none',
+                  cursor: 'pointer', transition: 'background 0.15s',
+                }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.02)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div style={{
+                    width: 38, height: 38, borderRadius: 11, flexShrink: 0,
+                    background: isOpen ? AMBER_BG : 'rgba(16,185,129,0.10)',
+                    border: `1px solid ${isOpen ? AMBER_BOR : 'rgba(16,185,129,0.20)'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {isOpen
+                      ? <AlertCircle  size={16} style={{ color: AMBER_DARK }} />
+                      : <CheckCircle  size={16} style={{ color: '#10B981'  }} />
+                    }
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-main)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {t.title}
+                    </p>
+                    <p style={{ fontSize: 11.5, color: 'var(--text-muted)', margin: '2px 0 0' }}>
+                      {t.id} · {t.date}
+                    </p>
+                  </div>
+                  <span style={{
+                    fontSize: 11.5, fontWeight: 600, padding: '3px 10px', borderRadius: 99,
+                    background: isOpen ? AMBER_BG : 'rgba(16,185,129,0.10)',
+                    color: isOpen ? AMBER_DARK : '#10B981',
+                    border: `1px solid ${isOpen ? AMBER_BOR : 'rgba(16,185,129,0.20)'}`,
+                    flexShrink: 0, textTransform: 'capitalize',
+                  }}>
+                    {t.status}
+                  </span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate" style={{color:'var(--text-main)'}}>{t.title}</p>
-                  <p className="text-xs" style={{color:'var(--text-muted)'}}>{t.id} · {t.date}</p>
-                </div>
-                <span className="text-xs px-2 py-1 rounded-full font-semibold flex-shrink-0"
-                  style={{background:t.status==='open'?'rgba(244,120,32,0.1)':'rgba(0,166,81,0.1)',color:t.status==='open'?'var(--orange)':'#00A651'}}>
-                  {t.status}
-                </span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
 
-      {tab==='callback'&&(
-        <div className="card-elevated rounded-3xl p-5 space-y-4">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{background:'rgba(27,58,143,0.08)'}}>
-              <Phone size={18} color="#1B3A8F"/>
+      {/* ══════════════════ Callback ══════════════════ */}
+      {tab === 'callback' && (
+        <div style={{
+          background: 'white', border: '1px solid var(--border)',
+          borderRadius: 18, padding: '24px 24px',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+          maxWidth: 520,
+        }}>
+          {/* Icon + title */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 22 }}>
+            <div style={{
+              width: 42, height: 42, borderRadius: 12,
+              background: AMBER_BG, border: `1px solid ${AMBER_BOR}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <Phone size={19} style={{ color: AMBER_DARK }} />
             </div>
             <div>
-              <p className="font-black" style={{fontFamily:'serif',color:'var(--text-main)'}}>Request a Callback</p>
-              <p className="text-xs" style={{color:'var(--text-muted)'}}>We'll call you at your preferred time</p>
+              <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-main)', margin: 0, fontFamily: 'var(--font-display)' }}>
+                Request a Callback
+              </p>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>
+                We'll call you at your preferred time
+              </p>
             </div>
           </div>
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wide mb-1.5 block" style={{color:'var(--blue)'}}>Your Phone</label>
-            <input className="portal-input" placeholder="+254 712 345 678" value={cbPhone} onChange={e=>setCbPhone(e.target.value)}/>
-          </div>
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wide mb-1.5 block" style={{color:'var(--blue)'}}>Preferred Time</label>
-            <div className="grid grid-cols-2 gap-2">
-              {['ASAP (< 30 min)','Today 2PM–4PM','Today 4PM–6PM','Tomorrow Morning'].map(t=>(
-                <button key={t} onClick={()=>setCbTime(t)} className="py-2.5 px-3 rounded-xl text-xs font-semibold text-left transition-all"
-                  style={cbTime===t?{background:'rgba(244,120,32,0.1)',color:'var(--orange)',border:'1.5px solid rgba(244,120,32,0.3)'}:{background:'var(--bg)',color:'var(--text-muted)',border:'1.5px solid var(--border)'}}>
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
-          <input className="portal-input" placeholder="Brief description (optional)"/>
-          <button onClick={requestCb} disabled={submitting||!cbPhone||!cbTime} className="btn-primary" style={{opacity:(!cbPhone||!cbTime)?0.5:1}}>
-            {submitting?<span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>Scheduling...</span>
-            :<span className="flex items-center justify-center gap-2"><Phone size={15}/>Schedule Callback</span>}
-          </button>
-        </div>
-      )}
 
-      {showForm&&(
-        <div className="modal-bg">
-          <div className="bg-white rounded-3xl w-full max-w-md p-6 animate-slide-up" style={{boxShadow:'0 24px 64px rgba(27,58,143,0.2)'}}>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-black" style={{fontFamily:'serif',color:'var(--text-main)'}}>New Support Ticket</h3>
-              <button onClick={()=>setShowForm(false)} className="p-1.5 rounded-xl hover:bg-gray-100" style={{color:'var(--text-muted)'}}><X size={17}/></button>
+          {/* Fields */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 700, color: AMBER_DARK, textTransform: 'uppercase', letterSpacing: '0.09em', display: 'block', marginBottom: 6 }}>
+                Your Phone
+              </label>
+              <input className="portal-input" placeholder="+254 712 345 678"
+                value={cbPhone} onChange={e => setCbPhone(e.target.value)} />
             </div>
-            <div className="space-y-4">
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
-                <label className="text-xs font-bold uppercase tracking-wide mb-1.5 block" style={{color:'var(--blue)'}}>Subject</label>
-                <input className="portal-input" placeholder="Brief description" value={tf.title} onChange={e=>setTf(p=>({...p,title:e.target.value}))}/>
+                <label style={{ fontSize: 11, fontWeight: 700, color: AMBER_DARK, textTransform: 'uppercase', letterSpacing: '0.09em', display: 'block', marginBottom: 6 }}>
+                  Date
+                </label>
+                <input className="portal-input" type="date"
+                  min={getTodayStr()} value={cbDate} onChange={handleDateChange} />
               </div>
               <div>
-                <label className="text-xs font-bold uppercase tracking-wide mb-1.5 block" style={{color:'var(--blue)'}}>Category</label>
-                <select className="portal-input" value={tf.category} onChange={e=>setTf(p=>({...p,category:e.target.value}))}>
-                  <option value="">Select category</option>
-                  {['Connectivity Issue','Billing & Payments','Account Access','Slow Speeds','Other'].map(c=><option key={c}>{c}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wide mb-1.5 block" style={{color:'var(--blue)'}}>Description</label>
-                <textarea className="portal-input" rows={4} placeholder="Describe your issue..." value={tf.message} onChange={e=>setTf(p=>({...p,message:e.target.value}))} style={{resize:'none'}}/>
+                <label style={{ fontSize: 11, fontWeight: 700, color: AMBER_DARK, textTransform: 'uppercase', letterSpacing: '0.09em', display: 'block', marginBottom: 6 }}>
+                  Time
+                </label>
+                <input className="portal-input" type="time"
+                  min={getMinTime(cbDate)} value={cbTime}
+                  onChange={e => { if (e.target.value >= getMinTime(cbDate)) setCbTime(e.target.value) }}
+                  disabled={!cbDate}
+                  style={{ opacity: cbDate ? 1 : 0.45, cursor: cbDate ? 'pointer' : 'not-allowed' }} />
               </div>
             </div>
-            <button onClick={submitTicket} disabled={submitting||!tf.title||!tf.message} className="btn-primary mt-5" style={{opacity:(!tf.title||!tf.message)?0.5:1}}>
-              {submitting?<span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>Submitting...</span>
-              :<span className="flex items-center justify-center gap-2"><Send size={15}/>Submit Ticket</span>}
+
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 700, color: AMBER_DARK, textTransform: 'uppercase', letterSpacing: '0.09em', display: 'block', marginBottom: 6 }}>
+                Description (optional)
+              </label>
+              <input className="portal-input" placeholder="Brief description of your issue" />
+            </div>
+
+            <button onClick={requestCb} disabled={submitting || !cbReady} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              width: '100%', padding: '11px',
+              background: cbReady ? `linear-gradient(135deg,${AMBER},${AMBER_DARK})` : 'rgba(0,0,0,0.07)',
+              color: cbReady ? '#0a0a0a' : 'var(--text-muted)',
+              border: 'none', borderRadius: 11, fontSize: 13.5, fontWeight: 700,
+              cursor: cbReady ? 'pointer' : 'not-allowed',
+              transition: 'all 0.15s',
+              boxShadow: cbReady ? '0 2px 8px rgba(245,158,11,0.28)' : 'none',
+              fontFamily: 'var(--font-display)',
+            }}>
+              {submitting ? <><Spinner />Scheduling…</> : <><Phone size={14} />Schedule Callback</>}
             </button>
           </div>
         </div>
       )}
+
+      {/* ══════════════════ New Ticket Modal ══════════════════ */}
+      {showForm && (
+        <div className="modal-bg">
+          <div style={{
+            background: 'white', borderRadius: 20,
+            width: '100%', maxWidth: 440,
+            padding: '24px', animation: 'slideUp 0.2s ease',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.14)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-main)', margin: 0, fontFamily: 'var(--font-display)' }}>
+                New Support Ticket
+              </h3>
+              <button onClick={() => setShowForm(false)} style={{
+                width: 28, height: 28, borderRadius: 8, border: 'none',
+                background: 'var(--bg)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--text-muted)',
+              }}>
+                <X size={15} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {[
+                { label: 'Subject', key: 'title', type: 'input', placeholder: 'Brief description of your issue' },
+              ].map(f => (
+                <div key={f.key}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: AMBER_DARK, textTransform: 'uppercase', letterSpacing: '0.09em', display: 'block', marginBottom: 6 }}>
+                    {f.label}
+                  </label>
+                  <input className="portal-input" placeholder={f.placeholder}
+                    value={tf[f.key]} onChange={e => setTf(p => ({ ...p, [f.key]: e.target.value }))} />
+                </div>
+              ))}
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: AMBER_DARK, textTransform: 'uppercase', letterSpacing: '0.09em', display: 'block', marginBottom: 6 }}>
+                  Category
+                </label>
+                <select className="portal-input" value={tf.category}
+                  onChange={e => setTf(p => ({ ...p, category: e.target.value }))}>
+                  <option value="">Select category</option>
+                  {['Connectivity Issue', 'Billing & Payments', 'Account Access', 'Slow Speeds', 'Other'].map(c => (
+                    <option key={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: AMBER_DARK, textTransform: 'uppercase', letterSpacing: '0.09em', display: 'block', marginBottom: 6 }}>
+                  Description
+                </label>
+                <textarea className="portal-input" rows={4} placeholder="Describe your issue in detail…"
+                  value={tf.message} onChange={e => setTf(p => ({ ...p, message: e.target.value }))}
+                  style={{ resize: 'none', lineHeight: 1.6 }} />
+              </div>
+            </div>
+
+            <button onClick={submitTicket} disabled={submitting || !ticketOk} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              width: '100%', marginTop: 18,
+              background: ticketOk ? `linear-gradient(135deg,${AMBER},${AMBER_DARK})` : 'rgba(0,0,0,0.07)',
+              color: ticketOk ? '#0a0a0a' : 'var(--text-muted)',
+              border: 'none', borderRadius: 11, padding: '11px',
+              fontSize: 13.5, fontWeight: 700,
+              cursor: ticketOk ? 'pointer' : 'not-allowed',
+              boxShadow: ticketOk ? '0 2px 8px rgba(245,158,11,0.28)' : 'none',
+              fontFamily: 'var(--font-display)',
+            }}>
+              {submitting ? <><Spinner />Submitting…</> : <><Send size={14} />Submit Ticket</>}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg) } }
+        @keyframes sPulse {
+          0%,100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.55); }
+          50%     { box-shadow: 0 0 0 5px rgba(16,185,129,0); }
+        }
+      `}</style>
     </div>
   )
 }

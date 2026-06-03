@@ -1,38 +1,34 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Wifi, MapPin, Phone, Star, ChevronRight,
-  RefreshCw, CheckCircle, Clock, PhoneCall
+  RefreshCw, CheckCircle, Clock, PhoneCall,
+  Home, Briefcase, Globe, Plus, X, Tag,
+  ArrowRight, Settings
 } from 'lucide-react'
+import { useApp } from '../context/AppContext'
 
-const PROVIDERS = [
+/* ── Category config ─────────────────────────────────── */
+const CATEGORIES = [
+  { id: 'home',    label: 'Home',    icon: Home,      color: '#0F766E', bg: '#F0FDFA', border: 'rgba(15,118,110,0.25)' },
+  { id: 'office',  label: 'Office',  icon: Briefcase, color: '#0369A1', bg: '#F0F9FF', border: 'rgba(3,105,161,0.25)'  },
+  { id: 'roaming', label: 'Roaming', icon: Globe,     color: '#7C3AED', bg: '#FAF5FF', border: 'rgba(124,58,237,0.25)' },
+]
+
+/* ── Initial provider data ───────────────────────────── */
+const INITIAL_PROVIDERS = [
   {
-    id: 1,
-    name: 'NetConnect ISP',
-    type: 'Primary ISP',
-    status: 'active',
-    location: 'Westlands, Nairobi',
-    phone: '+254 20 123 4567',
-    speed: '50 Mbps',
-    uptime: '99.8',
-    rating: 4.8,
-    since: 'Jan 2024',
-    initials: 'NC',
-    accent: 'green',
+    id: 1, name: 'DirectCore ISP', type: 'Primary ISP', status: 'active',
+    location: 'Westlands, Nairobi', phone: '+254 20 123 4567',
+    speed: '50 Mbps', uptime: '99.8', rating: 4.8, since: 'Jan 2024',
+    initials: 'DC', categories: ['home'],
   },
-  // {
-  //   id: 2,
-  //   name: 'SwiftNet Kenya',
-  //   type: 'Backup ISP',
-  //   status: 'inactive',
-  //   location: 'CBD, Nairobi',
-  //   phone: '+254 20 765 4321',
-  //   speed: '20 Mbps',
-  //   uptime: '97.2',
-  //   rating: 4.2,
-  //   since: 'Mar 2024',
-  //   initials: 'SN',
-  //   accent: 'blue',
-  // },
+  {
+    id: 2, name: 'Zuku Fibre', type: 'Backup ISP', status: 'inactive',
+    location: 'Kilimani, Nairobi', phone: '+254 20 765 4321',
+    speed: '30 Mbps', uptime: '97.2', rating: 4.2, since: 'Mar 2024',
+    initials: 'ZK', categories: ['office'],
+  },
 ]
 
 const SLA_ROWS = [
@@ -42,377 +38,363 @@ const SLA_ROWS = [
   { label: 'IP Address Type',      value: 'Dynamic',   ok: false },
 ]
 
-// ─── Accent tokens ────────────────────────────────────────────────
-const ACCENTS = {
-  green: {
-    color:        '#1a6641',
-    avatarBg:     'rgba(26,102,65,0.10)',
-    avatarBorder: 'rgba(26,102,65,0.20)',
-    badgeBg:      'rgba(26,102,65,0.12)',
-    btnBg:        '#1a6641',
-    btnShadow:    'rgba(26,102,65,0.30)',
-    barBg:        '#1a6641',
-  },
-  blue: {
-    color:        '#1B3A8F',
-    avatarBg:     'rgba(27,58,143,0.10)',
-    avatarBorder: 'rgba(27,58,143,0.20)',
-    badgeBg:      'rgba(27,58,143,0.12)',
-    btnBg:        '#1B3A8F',
-    btnShadow:    'rgba(27,58,143,0.30)',
-    barBg:        '#1B3A8F',
-  },
-}
-
-// ─── Fonts (inject once) ─────────────────────────────────────────
-const FONT_LINK = 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap'
-
-function useGoogleFonts() {
-  if (typeof document !== 'undefined' && !document.getElementById('__serif_fonts__')) {
-    const link = document.createElement('link')
-    link.id   = '__serif_fonts__'
-    link.rel  = 'stylesheet'
-    link.href = FONT_LINK
-    document.head.appendChild(link)
-  }
-}
-
-// ─── Sub-components ───────────────────────────────────────────────
+/* ── Star row ────────────────────────────────────────── */
 function StarRow({ rating }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 5 }}>
+    <div className="flex items-center gap-0.5 mt-1">
       {[...Array(5)].map((_, i) => (
-        <Star
-          key={i}
-          size={11}
-          fill={i < Math.floor(rating) ? '#f59e0b' : 'none'}
-          color="#f59e0b"
-        />
+        <Star key={i} size={11} fill={i < Math.floor(rating) ? '#F59E0B' : 'none'} color="#F59E0B" />
       ))}
-      <span style={{ fontFamily: 'Lora, serif', fontSize: 12, color: '#888', marginLeft: 4 }}>
-        {rating}
-      </span>
+      <span className="text-xs ml-1.5" style={{ color: 'var(--text-muted)' }}>{rating}</span>
     </div>
   )
 }
 
-function StatBox({ label, value, color }) {
+/* ── Category pill ───────────────────────────────────── */
+function CategoryPill({ cat, onRemove }) {
+  const cfg = CATEGORIES.find(c => c.id === cat)
+  if (!cfg) return null
+  const Icon = cfg.icon
   return (
-    <div style={{
-      background: 'var(--bg-card2, #f5f5f5)',
-      borderRadius: 10,
-      padding: '10px 12px',
-      textAlign: 'center',
-    }}>
-      <p style={{
-        fontFamily: 'Lora, serif',
-        fontSize: 10,
-        textTransform: 'uppercase',
-        letterSpacing: '0.06em',
-        color: 'var(--text-muted, #888)',
-        marginBottom: 3,
-      }}>
-        {label}
-      </p>
-      <p style={{
-        fontFamily: 'Playfair Display, serif',
-        fontSize: 14,
-        fontWeight: 600,
-        color,
-      }}>
-        {value}
-      </p>
-    </div>
-  )
-}
-
-function ProviderCard({ p, expanded, onToggle, onToast }) {
-  const ac = ACCENTS[p.accent]
-
-  return (
-    <div style={{
-      background: 'var(--bg-card, #fff)',
-      border: '0.5px solid var(--border, #e5e7eb)',
-      borderRadius: 16,
-      overflow: 'hidden',
-      transition: 'box-shadow 0.2s',
-      boxShadow: expanded
-        ? '0 4px 24px rgba(0,0,0,0.10)'
-        : '0 1px 4px rgba(0,0,0,0.05)',
-    }}>
-
-      {/* ── Header ── */}
-      <div
-        onClick={onToggle}
-        style={{ padding: '18px 20px', cursor: 'pointer', userSelect: 'none' }}
-      >
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-          {/* Avatar */}
-          <div style={{
-            width: 50, height: 50, borderRadius: 12, flexShrink: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'Playfair Display, serif', fontWeight: 700, fontSize: 15,
-            background: ac.avatarBg,
-            border: `1px solid ${ac.avatarBorder}`,
-            color: ac.color,
-          }}>
-            {p.initials}
-          </div>
-
-          {/* Name block */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
-              <span style={{
-                fontFamily: 'Playfair Display, serif',
-                fontSize: 15, fontWeight: 700,
-                color: 'var(--text-main, #111)',
-              }}>
-                {p.name}
-              </span>
-              <span style={{
-                fontFamily: 'Lora, serif',
-                fontSize: 11, fontWeight: 600,
-                padding: '2px 9px', borderRadius: 20,
-                background: p.status === 'active' ? ac.badgeBg : 'var(--bg-card2, #f5f5f5)',
-                color: p.status === 'active' ? ac.color : 'var(--text-muted, #888)',
-              }}>
-                {p.status === 'active' ? '● Active' : '○ Inactive'}
-              </span>
-            </div>
-            <p style={{
-              fontFamily: 'Lora, serif', fontStyle: 'italic',
-              fontSize: 12, color: 'var(--text-muted, #888)',
-            }}>
-              {p.type}
-            </p>
-            <StarRow rating={p.rating} />
-          </div>
-
-          {/* Chevron */}
-          <ChevronRight
-            size={18}
-            style={{
-              color: 'var(--text-muted, #aaa)',
-              flexShrink: 0,
-              marginTop: 2,
-              transition: 'transform 0.2s',
-              transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
-            }}
-          />
-        </div>
-
-        {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginTop: 14 }}>
-          <StatBox label="Speed"  value={p.speed}         color={ac.color} />
-          <StatBox label="Uptime" value={`${p.uptime}%`}  color={ac.color} />
-          <StatBox label="Since"  value={p.since}         color={ac.color} />
-        </div>
-      </div>
-
-      {/* ── Expanded detail ── */}
-      {expanded && (
-        <div style={{
-          padding: '16px 20px 20px',
-          borderTop: '0.5px solid var(--border, #e5e7eb)',
-        }}>
-          {/* Meta */}
-          <div style={{ marginBottom: 14 }}>
-            {[
-              { icon: MapPin, text: p.location },
-              { icon: Phone,  text: p.phone    },
-            ].map(({ icon: Icon, text }) => (
-              <div key={text} style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                fontFamily: 'Lora, serif', fontSize: 13,
-                color: 'var(--text-sub, #555)', marginBottom: 7,
-              }}>
-                <Icon size={13} color={ac.color} />
-                {text}
-              </div>
-            ))}
-          </div>
-
-          {/* Uptime bar */}
-          <div style={{ marginBottom: 16 }}>
-            <div style={{
-              display: 'flex', justifyContent: 'space-between',
-              fontFamily: 'Lora, serif', fontSize: 12, marginBottom: 6,
-            }}>
-              <span style={{ color: 'var(--text-muted, #888)' }}>Network uptime (30d)</span>
-              <span style={{ color: ac.color, fontWeight: 600 }}>{p.uptime}%</span>
-            </div>
-            <div style={{
-              height: 5, borderRadius: 3,
-              background: 'var(--bg-card2, #f0f0f0)', overflow: 'hidden',
-            }}>
-              <div style={{
-                height: '100%', borderRadius: 3,
-                width: `${p.uptime}%`,
-                background: ac.barBg,
-                transition: 'width 0.7s ease',
-              }} />
-            </div>
-          </div>
-
-          {/* Buttons */}
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button
-              onClick={() => onToast(`Switched to ${p.name}`)}
-              style={{
-                flex: 1, padding: '10px 0', borderRadius: 10, border: 'none',
-                fontFamily: 'Lora, serif', fontSize: 13, fontWeight: 600,
-                color: '#fff', background: ac.btnBg, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                boxShadow: `0 3px 12px ${ac.btnShadow}`,
-                transition: 'opacity 0.15s, transform 0.1s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.opacity = '0.9'; e.currentTarget.style.transform = 'translateY(-1px)' }}
-              onMouseLeave={e => { e.currentTarget.style.opacity = '1';   e.currentTarget.style.transform = 'translateY(0)'  }}
-            >
-              <RefreshCw size={13} /> Switch to this
-            </button>
-            <button
-              onClick={() => onToast('Support ticket created')}
-              style={{
-                flex: 1, padding: '10px 0', borderRadius: 10,
-                fontFamily: 'Lora, serif', fontSize: 13, fontWeight: 600,
-                background: 'transparent',
-                border: '0.5px solid var(--border-strong, #ccc)',
-                color: 'var(--text-sub, #555)', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                transition: 'background 0.15s, color 0.15s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-card2, #f5f5f5)'; e.currentTarget.style.color = ac.color }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-sub, #555)' }}
-            >
-              <PhoneCall size={13} /> Contact ISP
-            </button>
-          </div>
-        </div>
+    <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold"
+      style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
+      <Icon size={10} />
+      {cfg.label}
+      {onRemove && (
+        <button onClick={e => { e.stopPropagation(); onRemove(cat) }}
+          className="ml-0.5 rounded-full hover:opacity-70 transition-opacity">
+          <X size={10} />
+        </button>
       )}
     </div>
   )
 }
 
-function Toast({ message }) {
+/* ── Category editor ─────────────────────────────────── */
+function CategoryEditor({ providerName, current, onSave, onClose }) {
+  const [selected, setSelected] = useState([...current])
+
+  const toggle = (id) => {
+    setSelected(prev =>
+      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
+    )
+  }
+
   return (
-    <div style={{
-      position: 'fixed', bottom: 24, right: 24, zIndex: 50,
-      background: 'var(--text-main, #111)',
-      color: 'var(--bg-card, #fff)',
-      fontFamily: 'Lora, serif', fontSize: 13, fontWeight: 500,
-      padding: '10px 16px', borderRadius: 10,
-      display: 'flex', alignItems: 'center', gap: 8,
-      boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
-      animation: 'slideUp 0.25s ease',
-    }}>
-      <CheckCircle size={15} color="#4ade80" />
-      {message}
+    <div className="modal-bg" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-3xl w-full max-w-sm p-6 animate-slide-up"
+        style={{ boxShadow: 'var(--shadow-lg)' }}>
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h3 className="text-base font-bold" style={{ color: 'var(--text-main)' }}>
+              Manage Categories
+            </h3>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{providerName}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-slate-100 transition-all"
+            style={{ color: 'var(--text-muted)' }}>
+            <X size={16} />
+          </button>
+        </div>
+
+        <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+          Where do you use this provider?
+        </p>
+
+        <div className="space-y-2 mb-6">
+          {CATEGORIES.map(cat => {
+            const Icon = cat.icon
+            const isOn = selected.includes(cat.id)
+            return (
+              <button key={cat.id} onClick={() => toggle(cat.id)}
+                className="w-full flex items-center gap-3 p-3.5 rounded-2xl transition-all text-left"
+                style={{
+                  background: isOn ? cat.bg : 'var(--bg)',
+                  border: `1.5px solid ${isOn ? cat.border : 'var(--border)'}`,
+                  boxShadow: isOn ? `0 2px 8px ${cat.border}` : 'none',
+                }}>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: isOn ? cat.color : '#E2E8F0' }}>
+                  <Icon size={15} color={isOn ? 'white' : '#94A3B8'} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold" style={{ color: isOn ? cat.color : 'var(--text-main)' }}>
+                    {cat.label}
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    {cat.id === 'home'    && 'Your residential connection'}
+                    {cat.id === 'office'  && 'Workplace or business use'}
+                    {cat.id === 'roaming' && 'When travelling or mobile'}
+                  </p>
+                </div>
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all`}
+                  style={{
+                    borderColor: isOn ? cat.color : '#CBD5E1',
+                    background: isOn ? cat.color : 'transparent',
+                  }}>
+                  {isOn && <CheckCircle size={10} color="white" fill="white" />}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+
+        <button className="btn-primary" onClick={() => { onSave(selected); onClose() }}>
+          <CheckCircle size={15} /> Save Categories
+        </button>
+      </div>
     </div>
   )
 }
 
-// ─── Page ─────────────────────────────────────────────────────────
-export default function ProvidersPage() {
-  useGoogleFonts()
+/* ── Provider card ───────────────────────────────────── */
+function ProviderCard({ p, expanded, onToggle, onCategoryUpdate, onSwitch }) {
+  const [showCatEditor, setShowCatEditor] = useState(false)
+  const navigate = useNavigate()
 
-  const [selected, setSelected] = useState(null)
-  const [toast, setToast]       = useState(null)
-
-  const showToast = (msg) => {
-    setToast(msg)
-    setTimeout(() => setToast(null), 2800)
+  const handleSwitch = (e) => {
+    e.stopPropagation()
+    onSwitch(p)
+    navigate('/packages')
   }
 
   return (
-    <div style={{ maxWidth: 620, fontFamily: 'Lora, serif' }}>
-      <style>{`@keyframes slideUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>
-
-      {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-          <Wifi size={22} color="#d97706" />
-          <h1 style={{
-            fontFamily: 'Playfair Display, serif',
-            fontSize: 26, fontWeight: 700,
-            color: 'var(--text-main, #111)',
-            letterSpacing: '-0.02em', margin: 0,
-          }}>
-            My Providers
-          </h1>
-        </div>
-        <p style={{
-          fontFamily: 'Lora, serif', fontStyle: 'italic',
-          fontSize: 14, color: 'var(--text-muted, #888)',
+    <>
+      <div className="card-elevated rounded-2xl overflow-hidden transition-all"
+        style={{
+          boxShadow: expanded ? 'var(--shadow-md)' : 'var(--shadow-sm)',
+          border: p.status === 'active' ? '1.5px solid rgba(15,118,110,0.2)' : '1px solid var(--border)',
         }}>
-          View and manage your network providers
-        </p>
-        <div style={{
-          marginTop: 14, height: 2, width: 42, borderRadius: 2,
-          background: 'linear-gradient(90deg, #d97706, #fbbf24)',
+
+        {/* Status top bar */}
+        <div className="h-1 w-full" style={{
+          background: p.status === 'active'
+            ? 'linear-gradient(90deg, #0F766E, #14B8A6)'
+            : 'linear-gradient(90deg, #CBD5E1, #E2E8F0)',
         }} />
+
+        {/* Header */}
+        <div className="p-5 cursor-pointer select-none" onClick={onToggle}>
+          <div className="flex items-start gap-3">
+            {/* Avatar */}
+            <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-sm font-bold flex-shrink-0"
+              style={{
+                background: p.status === 'active' ? 'rgba(15,118,110,0.1)' : 'var(--bg)',
+                border: p.status === 'active' ? '1px solid rgba(15,118,110,0.2)' : '1px solid var(--border)',
+                color: p.status === 'active' ? 'var(--teal)' : 'var(--text-muted)',
+                fontFamily: 'var(--font-display)',
+              }}>
+              {p.initials}
+            </div>
+
+            {/* Name block */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                <span className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{p.name}</span>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                  style={p.status === 'active'
+                    ? { background: '#F0FDFA', color: 'var(--teal)', border: '1px solid rgba(15,118,110,0.2)' }
+                    : { background: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }
+                  }>
+                  {p.status === 'active' ? '● Active' : '○ Inactive'}
+                </span>
+              </div>
+              <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>{p.type}</p>
+              <StarRow rating={p.rating} />
+
+              {/* Category pills */}
+              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                {p.categories.length > 0
+                  ? p.categories.map(c => (
+                      <CategoryPill key={c} cat={c}
+                        onRemove={cat => onCategoryUpdate(p.id, p.categories.filter(x => x !== cat))}
+                      />
+                    ))
+                  : <span className="text-xs" style={{ color: 'var(--text-muted)' }}>No categories set</span>
+                }
+                <button
+                  onClick={e => { e.stopPropagation(); setShowCatEditor(true) }}
+                  className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold transition-all hover:opacity-80"
+                  style={{ background: 'var(--bg)', color: 'var(--text-muted)', border: '1px dashed #CBD5E1' }}>
+                  <Tag size={9} /> Edit
+                </button>
+              </div>
+            </div>
+
+            <ChevronRight size={17} style={{
+              color: 'var(--text-muted)', flexShrink: 0, marginTop: 2,
+              transition: 'transform 0.2s',
+              transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+            }} />
+          </div>
+
+          {/* Stat boxes */}
+          <div className="grid grid-cols-3 gap-2 mt-4">
+            {[{ l: 'Speed', v: p.speed }, { l: 'Uptime', v: `${p.uptime}%` }, { l: 'Since', v: p.since }].map(({ l, v }) => (
+              <div key={l} className="rounded-xl p-2.5 text-center" style={{ background: 'var(--bg)' }}>
+                <p className="text-xs mb-0.5" style={{ color: 'var(--text-muted)' }}>{l}</p>
+                <p className="text-xs font-bold" style={{ color: 'var(--teal)' }}>{v}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Expanded detail */}
+        {expanded && (
+          <div className="px-5 pb-5 pt-0" style={{ borderTop: '1px solid var(--border)' }}>
+            <div className="pt-4 space-y-2 mb-4">
+              {[{ icon: MapPin, text: p.location }, { icon: Phone, text: p.phone }].map(({ icon: Icon, text }) => (
+                <div key={text} className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-sub)' }}>
+                  <Icon size={13} color="var(--teal)" />
+                  {text}
+                </div>
+              ))}
+            </div>
+
+            {/* Uptime bar */}
+            <div className="mb-4">
+              <div className="flex justify-between text-xs mb-1.5">
+                <span style={{ color: 'var(--text-muted)' }}>Network uptime (30d)</span>
+                <span className="font-semibold" style={{ color: 'var(--teal)' }}>{p.uptime}%</span>
+              </div>
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--bg)' }}>
+                <div className="h-full rounded-full transition-all"
+                  style={{ width: `${p.uptime}%`, background: 'linear-gradient(90deg, #0D5C56, #14B8A6)' }} />
+              </div>
+            </div>
+
+            {/* Category management shortcut */}
+            <div className="rounded-2xl p-3.5 mb-4 flex items-center justify-between"
+              style={{ background: 'var(--teal-pale)', border: '1px solid rgba(15,118,110,0.15)' }}>
+              <div className="flex items-center gap-2">
+                <Settings size={14} color="var(--teal)" />
+                <div>
+                  <p className="text-xs font-semibold" style={{ color: 'var(--teal-dark)' }}>Categories</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    {p.categories.length > 0
+                      ? p.categories.map(c => CATEGORIES.find(x => x.id === c)?.label).join(', ')
+                      : 'None assigned'}
+                  </p>
+                </div>
+              </div>
+              <button onClick={e => { e.stopPropagation(); setShowCatEditor(true) }}
+                className="text-xs font-semibold px-3 py-1.5 rounded-xl transition-all"
+                style={{ background: 'var(--teal)', color: 'white' }}>
+                Manage
+              </button>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-2">
+              <button onClick={handleSwitch}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
+                style={{ background: 'linear-gradient(135deg, #0F766E, #0D5C56)', boxShadow: '0 3px 12px rgba(15,118,110,0.3)' }}>
+                <RefreshCw size={14} /> Switch Location
+              </button>
+              <button
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                style={{ background: 'var(--bg)', color: 'var(--text-sub)', border: '1px solid var(--border)' }}
+                onMouseEnter={e => { e.currentTarget.style.color = 'var(--teal)'; e.currentTarget.style.borderColor = 'rgba(15,118,110,0.3)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-sub)'; e.currentTarget.style.borderColor = 'var(--border)' }}>
+                <PhoneCall size={14} /> Contact ISP
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Category editor modal */}
+      {showCatEditor && (
+        <CategoryEditor
+          providerName={p.name}
+          current={p.categories}
+          onSave={cats => onCategoryUpdate(p.id, cats)}
+          onClose={() => setShowCatEditor(false)}
+        />
+      )}
+    </>
+  )
+}
+
+/* ── Page ────────────────────────────────────────────── */
+export default function ProvidersPage() {
+  const [providers, setProviders] = useState(INITIAL_PROVIDERS)
+  const [expanded, setExpanded]   = useState(null)
+  const { showToast, setActiveProvider } = useApp()
+  const navigate = useNavigate()
+
+  const updateCategories = (id, cats) => {
+    setProviders(prev => prev.map(p => p.id === id ? { ...p, categories: cats } : p))
+    showToast('Categories updated', 'success')
+  }
+
+  const handleSwitch = (provider) => {
+    setActiveProvider({ id: provider.id, name: provider.name, location: provider.location })
+    showToast(`Switched to ${provider.name} — loading packages…`, 'success')
+  }
+
+  return (
+    <div className="animate-fade-in" style={{ width: '100%' }}>
+      {/* Page header */}
+      <div className="mb-7">
+        <div className="flex items-center gap-2 mb-1">
+          <Wifi size={20} color="var(--teal)" />
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>My Providers</h1>
+        </div>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+          Manage your ISPs and categorise each connection
+        </p>
+        {/* Teal underline accent */}
+        <div className="mt-3 h-0.5 w-10 rounded-full" style={{ background: 'linear-gradient(90deg, var(--teal), var(--teal-light))' }} />
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-2 mb-5 flex-wrap">
+        <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Categories:</span>
+        {CATEGORIES.map(c => {
+          const Icon = c.icon
+          return (
+            <div key={c.id} className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
+              style={{ background: c.bg, color: c.color, border: `1px solid ${c.border}` }}>
+              <Icon size={10} />{c.label}
+            </div>
+          )
+        })}
       </div>
 
       {/* Provider cards */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 16 }}>
-        {PROVIDERS.map(p => (
-          <ProviderCard
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '20px' }}>
+  {providers.map(p => (
+    <ProviderCard
             key={p.id}
             p={p}
-            expanded={selected === p.id}
-            onToggle={() => setSelected(selected === p.id ? null : p.id)}
-            onToast={showToast}
+            expanded={expanded === p.id}
+            onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
+            onCategoryUpdate={updateCategories}
+            onSwitch={handleSwitch}
           />
         ))}
       </div>
 
-      {/* Service Agreements */}
-      <div style={{
-        background: 'var(--bg-card, #fff)',
-        border: '0.5px solid var(--border, #e5e7eb)',
-        borderRadius: 16, padding: '18px 20px',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-      }}>
-        <h3 style={{
-          fontFamily: 'Playfair Display, serif',
-          fontSize: 16, fontWeight: 600,
-          color: 'var(--text-main, #111)',
-          letterSpacing: '-0.01em', marginBottom: 14,
-        }}>
-          Service agreements
-        </h3>
+      {/* SLA box */}
+      <div className="card-elevated rounded-2xl p-5">
+        <h3 className="font-bold text-sm mb-4" style={{ color: 'var(--text-main)' }}>Service Agreements</h3>
         {SLA_ROWS.map(({ label, value, ok }, i) => (
-          <div
-            key={label}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '10px 0',
-              borderBottom: i < SLA_ROWS.length - 1 ? '0.5px solid var(--border, #e5e7eb)' : 'none',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div key={label} className="flex items-center justify-between py-2.5"
+            style={{ borderBottom: i < SLA_ROWS.length - 1 ? '1px solid var(--border)' : 'none' }}>
+            <div className="flex items-center gap-2">
               {ok
-                ? <CheckCircle size={13} color="#1a6641" />
-                : <Clock size={13} color="#d97706" />
+                ? <CheckCircle size={13} color="var(--teal)" />
+                : <Clock size={13} color="var(--warning)" />
               }
-              <span style={{
-                fontFamily: 'Lora, serif', fontSize: 13,
-                color: 'var(--text-sub, #555)',
-              }}>
-                {label}
-              </span>
+              <span className="text-sm" style={{ color: 'var(--text-sub)' }}>{label}</span>
             </div>
-            <span style={{
-              fontFamily: 'Lora, serif', fontSize: 13, fontWeight: 600,
-              color: ok ? 'var(--text-main, #111)' : 'var(--text-muted, #888)',
-            }}>
+            <span className="text-sm font-semibold" style={{ color: ok ? 'var(--text-main)' : 'var(--text-muted)' }}>
               {value}
             </span>
           </div>
         ))}
       </div>
-
-      {toast && <Toast message={toast} />}
     </div>
   )
 }

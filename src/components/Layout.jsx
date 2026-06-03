@@ -1,96 +1,59 @@
-
 import { useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
-
 import Sidebar from './Sidebar'
-import Topbar from './Topbar'
-import Toast from './Toast'
+import Topbar  from './Topbar'
 import { useApp } from '../context/AppContext'
+
+function Toast() {
+  const { toast } = useApp()
+  if (!toast) return null
+  const cfg = {
+    success: { border:'rgba(15,118,110,0.3)',  dot:'var(--teal)',  bg:'rgba(15,118,110,0.07)'  },
+    error:   { border:'rgba(239,68,68,0.3)',    dot:'#EF4444',     bg:'rgba(239,68,68,0.07)'   },
+    info:    { border:'rgba(59,130,246,0.3)',   dot:'#3B82F6',     bg:'rgba(59,130,246,0.07)'  },
+  }
+  const s = cfg[toast.type] || cfg.success
+  return (
+    <div className="toast bg-white rounded-2xl px-4 py-3 flex items-center gap-3"
+      style={{ border:`1px solid ${s.border}`, background:s.bg, boxShadow:'0 8px 32px rgba(15,118,110,0.12)', maxWidth:320 }}>
+      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background:s.dot }} />
+      <p className="text-sm font-medium" style={{ color:'var(--text-main)' }}>{toast.message}</p>
+    </div>
+  )
+}
 
 export default function Layout() {
   const { user, sidebarOpen, setSidebarOpen } = useApp()
   const navigate = useNavigate()
-
-  // Redirect to login if unauthenticated
-  useEffect(() => {
-    if (!user) navigate('/')
-  }, [user, navigate])
+  useEffect(() => { if (!user) navigate('/') }, [user])
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      background: 'var(--bg-page, #f8f9fc)',
-    }}>
+    <div className="min-h-screen flex" style={{ background: 'var(--bg)' }}>
 
-      {/* ── Desktop sidebar (sticky left column) ── */}
-      <div
-        className="hidden md:flex"
-        style={{
-          width: 248,
-          flexShrink: 0,
-          height: '100vh',
-          position: 'sticky',
-          top: 0,
-        }}
-      >
+      {/* Desktop sidebar */}
+      <div className="hidden md:flex w-60 flex-shrink-0 h-screen sticky top-0">
         <Sidebar />
       </div>
 
-      {/* ── Mobile sidebar (overlay) ── */}
+      {/* Mobile sidebar */}
       {sidebarOpen && (
         <>
-          {/* Backdrop */}
-          <div
-            className="md:hidden"
-            onClick={() => setSidebarOpen(false)}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 40,
-              background: 'rgba(14,21,37,0.55)',
-              backdropFilter: 'blur(2px)',
-              WebkitBackdropFilter: 'blur(2px)',
-              animation: 'fadeIn 0.2s ease',
-            }}
-          />
-          {/* Drawer */}
-          <div
-            className="md:hidden"
-            style={{
-              position: 'fixed', left: 0, top: 0,
-              height: '100%', zIndex: 50,
-              width: 280,
-              animation: 'slideInLeft 0.22s ease',
-            }}
-          >
+          <div className="sidebar-overlay md:hidden" onClick={() => setSidebarOpen(false)} />
+          <div className="fixed left-0 top-0 h-full z-50 md:hidden" style={{ width: 272 }}>
             <Sidebar mobile />
           </div>
         </>
       )}
 
-      {/* ── Main column ── */}
-      <div style={{
-        flex: 1, minWidth: 0,
-        display: 'flex', flexDirection: 'column',
-      }}>
+      {/* Main */}
+      <div className="flex-1 min-w-0 flex flex-col">
         <Topbar />
-
-        <main style={{
-          flex: 1,
-          padding: '24px',
-          overflow: 'auto',
-        }}>
+        <main className="flex-1 overflow-auto page-container">
           <Outlet />
         </main>
       </div>
 
-      {/* ── Toast (global) ── */}
       <Toast />
-
-      {/* ── Keyframes ── */}
-      <style>{`
-        @keyframes fadeIn     { from { opacity: 0; }             to { opacity: 1; }             }
-        @keyframes slideInLeft{ from { transform: translateX(-100%); } to { transform: translateX(0); } }
-      `}</style>
     </div>
   )
 }

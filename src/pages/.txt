@@ -1,0 +1,518 @@
+import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { ArrowRight, Zap, RotateCcw, CheckCircle2, Wifi } from 'lucide-react'
+import { useApp } from '../context/AppContext'
+
+const REACT_API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+const REACT_API = import.meta.env.VITE_API
+
+/* ── Detect input type ──────────────────────────────────── */
+function detectType(val) {
+  const v = val.trim()
+  if (!v) return null
+  if (/^[A-Z0-9]{2,}-[A-Z0-9]/i.test(v)) return 'voucher'
+  if (/^\+?[\d\s\-]{7,}$/.test(v)) return 'phone'
+  if (v.includes('@')) return 'email'
+  return null
+}
+
+const TYPE_META = {
+  email: { label: 'Email detected', color: '#0F766E', bg: '#F0FDFA' },
+  phone: { label: 'Phone number detected', color: '#0F766E', bg: '#F0FDFA' },
+  voucher: { label: 'Voucher code detected', color: '#0D9488', bg: '#F0FDFA' },
+}
+
+/* ── OTP Input row ─────────────────────────────────────── */
+function OtpInput({ value, onChange }) {
+  const inputs = useRef([])
+  const digits = value.split('')
+
+  const handleKey = (i, e) => {
+    if (e.key === 'Backspace') {
+      if (!digits[i] && i > 0) inputs.current[i - 1]?.focus()
+      const next = [...digits]
+      next[i] = ''
+      onChange(next.join(''))
+      return
+    }
+    if (e.key === 'ArrowLeft' && i > 0) {
+      inputs.current[i - 1]?.focus()
+      return
+    }
+    if (e.key === 'ArrowRight' && i < 5) {
+      inputs.current[i + 1]?.focus()
+      return
+    }
+  }
+
+  const handleChange = (i, e) => {
+    const val = e.target.value.replace(/\D/g, '').slice(-1)
+    const next = [...Array(6)].map((_, idx) => digits[idx] || '')
+    next[i] = val
+    onChange(next.join(''))
+    if (val && i < 5) inputs.current[i + 1]?.focus()
+  }
+
+  const handlePaste = (e) => {
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    onChange(pasted.padEnd(6, '').slice(0, 6))
+    inputs.current[Math.min(pasted.length, 5)]?.focus()
+    e.preventDefault()
+  }
+
+  return (
+    <div className="flex gap-2 justify-center" onPaste={handlePaste}>
+      {[...Array(6)].map((_, i) => (
+        <input
+          key={i}
+          ref={el => inputs.current[i] = el}
+          className={`otp-input ${digits[i] ? 'filled' : ''}`}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={digits[i] || ''}
+          onChange={e => handleChange(i, e)}
+          onKeyDown={e => handleKey(i, e)}
+          autoFocus={i === 0}
+        />
+      ))}
+    </div>
+  )
+}
+
+/* ── Step indicators ───────────────────────────────────── */
+function Steps({ current }) {
+  const steps = ['Identify', 'Verify', 'Connect']
+  return (
+    <div className="flex items-center gap-2 justify-center mb-8">
+      {steps.map((s, i) => {
+        const done = i < current
+        const active = i === current
+        return (
+          <div key={s} className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                done ? 'bg-teal-700 text-white' :
+                active ? 'bg-teal-700 text-white ring-4 ring-teal-100' :
+                'bg-slate-100 text-slate-400'
+              }`}>
+                {done ? <CheckCircle2 size={13} /> : i + 1}
+              </div>
+              <span className={`text-xs font-semibold hidden sm:block transition-colors ${
+                active ? 'text-teal-700' : done ? 'text-teal-600' : 'text-slate-400'
+              }`}>{s}</span>
+            </div>
+            {i < steps.length - 1 && (
+              <div className="w-8 h-px mx-1 transition-colors" style={{ background: i < current ? 'var(--teal)' : '#E2E8F0' }} />
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ── Main Auth Page ─────────────────────────────────────── */
+export default function AuthPage() {
+  const [step, setStep] = useState(0)
+  const [value, setValue] = useState('')
+  const [otp, setOtp] = useState('')
+  const [otpError, setOtpError] = useState(false)
+  const [countdown, setCountdown] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [tenantData, setTenantData] = useState(null)
+  const { login, showToast, isOnNet = false, tenantConfig, setTenantConfig } = useApp()
+  const navigate = useNavigate()
+
+  const type = detectType(value)
+  const meta = type ? TYPE_META[type] : null
+
+  /* ── Load bootstrap data on mount ── */
+  useEffect(() => {
+    const loadBootstrap = async () => {
+      try {
+        const response = await fetch(`${REACT_API_BASE_URL}/api/public/bootstrap`)
+        const result = await response.json()
+        
+        if (result.success && result.statusCode === 200) {
+          const { companyName, tenantId, logoUrl } = result.data
+          setTenantData({
+            companyName,
+            tenantId,
+            logoUrl
+          })
+          
+          if (setTenantConfig) {
+            setTenantConfig({
+              name: companyName,
+              logo: logoUrl,
+              tenantId: tenantId
+            })
+          }
+          
+          showToast(`Welcome to ${companyName}`, 'success')
+        } else {
+          console.error('Bootstrap failed:', result)
+          showToast('Failed to load company configuration', 'error')
+        }
+      } catch (error) {
+        console.error('Bootstrap error:', error)
+        showToast('Network error loading configuration', 'error')
+      }
+    }
+    
+    loadBootstrap()
+  }, [setTenantConfig, showToast])
+
+  /* countdown for resend */
+  useEffect(() => {
+    if (countdown <= 0) return
+    const t = setTimeout(() => setCountdown(c => c - 1), 1000)
+    return () => clearTimeout(t)
+  }, [countdown])
+
+  /* ── Step 0 → send OTP ── */
+  const handleSend = async () => {
+    if (!value.trim() || !type) return
+    if (type === 'voucher') {
+      handleConnect('voucher')
+      return
+    }
+    
+    setLoading(true)
+    
+    try {
+      const username = value.trim()
+      const notificationType = type === 'email' ? 'EMAIL' : 'SMS'
+      
+      const payload = {
+        appCode: "CAPPTR",
+        username: username,
+        tenantId: tenantData?.tenantId || "N/A",
+        notificationType: notificationType
+      }
+      
+      const response = await fetch(`${REACT_API}/api/v1/auth/otp-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      })
+      
+      const result = await response.json()
+      
+      if (response.ok && result.success) {
+        setStep(1)
+        setCountdown(30)
+        showToast(`OTP sent to ${username}`, 'success')
+      } else {
+        showToast(result.message || 'Failed to send OTP', 'error')
+      }
+    } catch (error) {
+      console.error('OTP send error:', error)
+      showToast('Network error sending OTP', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /* ── Step 1 → verify OTP ── */
+  const handleVerify = async () => {
+    if (otp.length < 6) return
+    setOtpError(false)
+    setLoading(true)
+    
+    try {
+      // Store verificationId from the OTP send response
+      // You need to save this when sending OTP
+      const payload = {
+        verificationId: verificationId, // This should come from the OTP send response
+        otp: otp
+      }
+      
+      const response = await fetch(`${REACT_API_BASE_URL}/api/v1/auth/validate-login-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      })
+      
+      const result = await response.json()
+      
+      if (response.ok && result.success) {
+        await handleConnect(type)
+      } else {
+        setOtpError(true)
+        showToast(result.message || 'Invalid OTP code', 'error')
+        setLoading(false)
+      }
+    } catch (error) {
+      console.error('OTP verification error:', error)
+      setOtpError(true)
+      showToast('Failed to verify OTP', 'error')
+      setLoading(false)
+    }
+}
+
+  /* ── After verify → load providers / global ── */
+  const handleConnect = async (t) => {
+    setStep(2)
+    
+    setTimeout(async () => {
+      const overrides = {}
+      if (t === 'email') overrides.email = value.trim()
+      if (t === 'phone') overrides.phone = value.trim()
+      if (t === 'voucher') overrides.voucherUsed = value.trim()
+      
+      overrides.tenantId = tenantData?.tenantId
+      overrides.companyName = tenantData?.companyName
+      
+      try {
+        await login(overrides)
+        showToast(t === 'voucher' ? 'Voucher activated!' : 'Identity verified!', 'success')
+        
+        if (isOnNet) {
+          navigate('/packages')
+        } else {
+          navigate('/services')
+        }
+      } catch (error) {
+        console.error('Login error:', error)
+        showToast('Failed to complete authentication', 'error')
+        setStep(0)
+      }
+    }, 1800)
+  }
+
+  /* ── Resend OTP ── */
+  const resend = async () => {
+    setOtp('')
+    setOtpError(false)
+    
+    try {
+      const username = value.trim()
+      const notificationType = type === 'email' ? 'EMAIL' : 'SMS'
+      
+      const payload = {
+        appCode: "CAPPTR",
+        username: username,
+        tenantId: tenantData?.tenantId || "N/A",
+        notificationType: notificationType
+      }
+      
+      const response = await fetch(`${REACT_API_BASE_URL}/api/v1/auth/otp-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      })
+      
+      if (response.ok) {
+        setCountdown(30)
+        showToast(`OTP resent to ${username}`, 'success')
+      } else {
+        showToast('Failed to resend OTP', 'error')
+      }
+    } catch (error) {
+      console.error('Resend error:', error)
+      showToast('Network error resending OTP', 'error')
+    }
+  }
+
+  /* ── auto-verify when all 6 digits entered ── */
+  useEffect(() => {
+    if (otp.length === 6 && step === 1 && !loading) {
+      handleVerify()
+    }
+  }, [otp, step, loading])
+
+  /* ── Logo component ── */
+  const Logo = () => (
+    <div className="flex flex-col items-center mb-8">
+      {isOnNet && tenantConfig?.logo && tenantConfig?.logo !== "/images/directcore.png" ? (
+        <img src={tenantConfig.logo} alt={tenantConfig.name} className="h-10 object-contain mb-2" />
+      ) : tenantData?.logoUrl && tenantData.logoUrl !== "/images/directcore.png" ? (
+        <img src={tenantData.logoUrl} alt={tenantData.companyName} className="h-10 object-contain mb-2" />
+      ) : (
+        <div className="flex items-center gap-2.5 mb-1">
+          <div className="w-9 h-9 rounded-2xl flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #0F766E, #0D5C56)', boxShadow: '0 4px 14px rgba(15,118,110,0.35)' }}>
+            <Wifi size={18} color="white" strokeWidth={2.5} />
+          </div>
+          <span className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-main)', fontFamily: 'var(--font-display)' }}>
+            One<span style={{ color: 'var(--teal)' }}>lynq</span>
+          </span>
+        </div>
+      )}
+      <div className="flex items-center gap-1.5 mt-1">
+        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 status-pulse" />
+        <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+          {isOnNet 
+            ? `${tenantConfig?.name || tenantData?.companyName || 'Network'} · WiFi Portal`
+            : 'WiFi Self-Service Portal'}
+        </p>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="min-h-screen auth-bg flex items-center justify-center p-4">
+      {/* Subtle decorative rings */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-5%] w-[500px] h-[500px] rounded-full opacity-[0.035]"
+          style={{ background: 'radial-gradient(circle, #0F766E, transparent)' }} />
+        <div className="absolute bottom-[-10%] right-[-5%] w-[400px] h-[400px] rounded-full opacity-[0.03]"
+          style={{ background: 'radial-gradient(circle, #14B8A6, transparent)' }} />
+      </div>
+
+      {/* Card */}
+      <div className="w-full max-w-sm relative">
+        <div className="card-raised rounded-3xl p-8 animate-slide-up">
+          {/* Logo */}
+          <Logo />
+
+          {/* Step indicators */}
+          <Steps current={step === 2 ? 2 : step} />
+
+          {/* ── STEP 0: Identify ── */}
+          {step === 0 && (
+            <div className="space-y-5 animate-fade-in">
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-main)' }}>
+                  {tenantData?.companyName || 'Get Connected'}
+                </h2>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  Enter your phone, email, or voucher code
+                </p>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider mb-1.5 block" style={{ color: 'var(--teal)' }}>
+                  Phone · Email · Voucher
+                </label>
+                <input
+                  className="portal-input"
+                  placeholder="phone or email or voucher"
+                  value={value}
+                  onChange={e => setValue(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSend()}
+                  autoFocus
+                  style={{ letterSpacing: type === 'voucher' ? '0.1em' : 'normal', fontFamily: type === 'voucher' ? 'var(--font-mono)' : 'inherit' }}
+                />
+
+                {/* type hint */}
+                <div style={{ height: 20, marginTop: 6 }}>
+                  {meta && (
+                    <div className="flex items-center gap-1.5 animate-fade-in">
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: meta.color, flexShrink: 0 }} />
+                      <span style={{ fontSize: 11, color: meta.color, fontWeight: 600 }}>{meta.label}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <button 
+                className="btn-primary" 
+                onClick={handleSend} 
+                disabled={loading || !value.trim() || !type || !tenantData}
+              >
+                {loading
+                  ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Sending OTP...</>
+                  : type === 'voucher'
+                  ? <><Zap size={15} />Activate Voucher</>
+                  : <><ArrowRight size={15} />Send OTP</>
+                }
+              </button>
+            </div>
+          )}
+
+          {/* ── STEP 1: OTP ── */}
+          {step === 1 && (
+            <div className="space-y-5 animate-fade-in">
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-main)' }}>Enter OTP</h2>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  We sent a 6-digit code to
+                </p>
+                <p className="text-sm font-semibold mt-0.5" style={{ color: 'var(--teal)' }}>
+                  {value}
+                </p>
+              </div>
+
+              <OtpInput value={otp} onChange={setOtp} />
+
+              {otpError && (
+                <p className="text-center text-xs font-medium text-red-500 animate-fade-in">
+                  Incorrect code. Please try again.
+                </p>
+              )}
+
+              <button 
+                className="btn-primary" 
+                onClick={handleVerify} 
+                disabled={loading || otp.length < 6}
+              >
+                {loading
+                  ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Verifying...</>
+                  : <><CheckCircle2 size={15} />Verify & Continue</>
+                }
+              </button>
+
+              {/* Resend + change */}
+              <div className="flex items-center justify-between text-xs pt-1">
+                <button
+                  onClick={() => { setStep(0); setOtp('') }}
+                  className="flex items-center gap-1 font-medium transition-colors"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  ← Change {type}
+                </button>
+                {countdown > 0
+                  ? <span style={{ color: 'var(--text-muted)' }}>Resend in {countdown}s</span>
+                  : <button onClick={resend} className="flex items-center gap-1 font-semibold" style={{ color: 'var(--teal)' }}>
+                      <RotateCcw size={12} />Resend OTP
+                    </button>
+                }
+              </div>
+            </div>
+          )}
+
+          {/* ── STEP 2: Loading providers ── */}
+          {step === 2 && (
+            <div className="py-4 text-center space-y-5 animate-fade-in">
+              <div className="w-16 h-16 rounded-full mx-auto flex items-center justify-center"
+                style={{ background: 'var(--teal-pale)', border: '2px solid rgba(15,118,110,0.2)' }}>
+                <Wifi size={28} color="var(--teal)" strokeWidth={1.5} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold mb-1" style={{ color: 'var(--text-main)' }}>
+                  {isOnNet ? 'Loading your providers…' : 'Loading services…'}
+                </h3>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  {isOnNet 
+                    ? `Fetching packages from ${tenantData?.companyName || 'your provider'}`
+                    : 'Setting up your global view'}
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-1.5">
+                {[0, 1, 2].map(i => (
+                  <div key={i} className="w-2 h-2 rounded-full" style={{ background: 'var(--teal)', animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <p className="text-center text-xs mt-5" style={{ color: 'var(--text-muted)' }}>
+          Powered by <span className="font-semibold" style={{ color: 'var(--teal)' }}>Onelynq</span>
+          {' '}· By connecting you accept our{' '}
+          <span className="underline underline-offset-2 cursor-pointer">terms of use</span>
+        </p>
+      </div>
+    </div>
+  )
+}

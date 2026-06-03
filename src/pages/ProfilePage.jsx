@@ -209,7 +209,7 @@ export default function ProfilePage() {
   ]
 
   const settings = [
-    { icon: Lock,   label: 'Change Password', sub: 'Last changed 30 days ago',          badge: null, badgeType: null },
+    // { icon: Lock,   label: 'Change Password', sub: 'Last changed 30 days ago',          badge: null, badgeType: null },
     { icon: Bell,   label: 'Notifications',   sub: 'Email & SMS alerts enabled',         badge: '3',  badgeType: 'blue' },
     { icon: Shield, label: 'Two-Factor Auth', sub: 'Add extra security to your account', badge: 'Off',badgeType: 'orange' },
   ]
