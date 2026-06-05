@@ -1,74 +1,103 @@
 import { createContext, useContext, useState } from 'react'
 
 const AppContext = createContext(null)
-export const useApp = () => useContext(AppContext)
 
-const DEMO_MODE = 'onnet'
-
-const ONNET_TENANT = {
-  id:           'directcore',
-  name:         'DirectCore',
-  logo:         null,
-  primaryColor: '#0F766E',
+export function useApp() {
+  return useContext(AppContext)
 }
 
-const ONNET_USER = {
-  name:      'Joy Letim',
-  email:     'letimjoy7@gmail.com',
-  phone:     '+254742142959',
-  plan:      'Weekly 20Mbps',
-  dataUsed:  4.2,
-  dataTotal: 10,
-  expiry:    '2026-07-15',
-  provider:  'DirectCore ISP',
-  mode:      'onnet',
+/* ── helpers ───────────────────────────────────────────── */
+function readSession(key, fallback = null) {
+  try {
+    const raw = sessionStorage.getItem(key)
+    if (!raw) return fallback
+    try { return JSON.parse(raw) } catch { return raw }
+  } catch { return fallback }
 }
 
-const ONNET_PROVIDER = {
-  id:       1,
-  name:     'DirectCore ISP',
-  location: 'Westlands, Nairobi',
+function buildTenantConfig() {
+  const tenant = readSession('onelynq_tenant') // { companyName, tenantId, logoUrl }
+  const name   = tenant?.companyName || readSession('onelynq_companyName') || null
+  const logo   = tenant?.logoUrl     || readSession('onelynq_logoUrl')     || null
+  const id     = tenant?.tenantId    || readSession('onelynq_tenantId')    || null
+  return name ? { id, name, logo } : null
 }
 
-const OFFNET_USER = {
-  name:      'Jane Wanjiku',
-  email:     'jane.wanjiku@gmail.com',
-  phone:     '+254700123456',
-  plan:      null,
-  dataUsed:  0,
-  dataTotal: 0,
-  expiry:    null,
-  provider:  null,
-  mode:      'offnet',
+function buildUser() {
+  const saved = readSession('olUser')
+  if (saved) return saved
+
+  const raw    = readSession('onelynq_user')
+  const tenant = buildTenantConfig()
+  if (!raw) return null
+
+  return {
+    name:        raw.fullName    || '',
+    email:       raw.email       || '',
+    phone:       raw.phone       || '',
+    partyId:     raw.partyId     || '',
+    partyRoleId: raw.partyRoleId || '',
+    userId:      raw.userId      || '',
+    plan:        null,
+    dataUsed:    0,
+    dataTotal:   0,
+    expiry:      null,
+    provider:    tenant?.name    || null,
+    mode:        'onnet',
+    companyName: tenant?.name    || '',
+    tenantId:    tenant?.id      || '',
+  }
 }
 
+function detectMode() {
+  const saved  = readSession('olUser')
+  if (saved?.mode) return saved.mode
+  const tenant = readSession('onelynq_tenant')
+  return tenant ? 'onnet' : 'offnet'
+}
+
+/* ── Provider ──────────────────────────────────────────── */
 export function AppProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    try {
-      const saved = sessionStorage.getItem('olUser')
-      return saved ? JSON.parse(saved) : null
-    } catch { return null }
-  })
-
+  const [user,           setUser]           = useState(() => buildUser())
   const [toast,          setToast]          = useState(null)
   const [sidebarOpen,    setSidebarOpen]    = useState(false)
   const [activePlan,     setActivePlan]     = useState(null)
-  const [activeProvider, setActiveProvider] = useState(
-    DEMO_MODE === 'onnet' ? ONNET_PROVIDER : null
-  )
+  const [activeProvider, setActiveProvider] = useState(null)
 
-  const isOnNet      = DEMO_MODE === 'onnet'
-  const tenantConfig = isOnNet ? ONNET_TENANT : null
-  const demoUser     = isOnNet ? ONNET_USER : OFFNET_USER
+  const mode         = detectMode()
+  const isOnNet      = mode === 'onnet'
+  const tenantConfig = isOnNet ? buildTenantConfig() : null
 
   const login = (userData) => {
-    const merged = { ...demoUser, ...userData }
+    const tenant  = buildTenantConfig()
+    const rawUser = readSession('onelynq_user') ?? {}
+
+    const merged = {
+      name:        rawUser.fullName    || '',
+      email:       rawUser.email       || '',
+      phone:       userData.phone      || rawUser.phone || '',
+      partyId:     rawUser.partyId     || '',
+      partyRoleId: rawUser.partyRoleId || '',
+      userId:      rawUser.userId      || '',
+      plan:        null,
+      dataUsed:    0,
+      dataTotal:   0,
+      expiry:      null,
+      provider:    tenant?.name        || null,
+      companyName: tenant?.name        || '',
+      tenantId:    tenant?.id          || '',
+      mode:        isOnNet ? 'onnet' : 'offnet',
+      ...userData,
+    }
+
     sessionStorage.setItem('olUser', JSON.stringify(merged))
     setUser(merged)
   }
 
   const logout = () => {
-    sessionStorage.removeItem('olUser')
+    Object.keys(sessionStorage)
+      .filter(k => k.startsWith('onelynq_') || k === 'olUser')
+      .forEach(k => sessionStorage.removeItem(k))
     setUser(null)
   }
 
@@ -82,10 +111,10 @@ export function AppProvider({ children }) {
       user, login, logout,
       toast, showToast,
       sidebarOpen, setSidebarOpen,
-      activePlan, setActivePlan,
+      activePlan,     setActivePlan,
       activeProvider, setActiveProvider,
-      isOnNet, tenantConfig,
-      demoUser,
+      isOnNet,
+      tenantConfig,
     }}>
       {children}
     </AppContext.Provider>

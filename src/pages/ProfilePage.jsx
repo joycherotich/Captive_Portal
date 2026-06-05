@@ -6,14 +6,12 @@ const css = `
   @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.7;transform:scale(1.3)} }
   @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
-  /* ── Wrapper: fills the parent, no artificial cap ── */
   .pf-wrap {
     animation: fadeUp .4s ease both;
     width: 100%;
     box-sizing: border-box;
   }
 
-  /* hero card */
   .pf-hero { border-radius: 22px; overflow: hidden; margin-bottom: 16px;
     background: var(--bg-card); border: 1px solid var(--border); box-shadow: var(--shadow-md); }
 
@@ -63,7 +61,6 @@ const css = `
 
   .pf-divider { height: 1px; background: var(--border); margin: 0 0 18px; }
 
-  /* stats — fluid columns that wrap naturally */
   .pf-stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -80,7 +77,6 @@ const css = `
     font-family: var(--font-display); letter-spacing: -0.01em;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  /* section card */
   .pf-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px;
     box-shadow: var(--shadow); margin-bottom: 16px; overflow: hidden; }
   .pf-card-head { padding: 17px 22px 15px; border-bottom: 1px solid var(--border);
@@ -92,7 +88,6 @@ const css = `
     background: rgba(244,120,32,0.1); color: #F47820; border: 1px solid rgba(244,120,32,0.2);
     font-family: var(--font-display); flex-shrink: 0; }
 
-  /* form — fluid two-column that collapses to one */
   .pf-form {
     padding: 22px;
     display: grid;
@@ -105,7 +100,6 @@ const css = `
   .pf-input-wrap { position: relative; }
   .pf-input-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); pointer-events: none; }
 
-  /* settings */
   .pf-settings-list { padding: 8px 10px; }
   .pf-setting-btn {
     width: 100%; display: flex; align-items: center; gap: 14px;
@@ -121,7 +115,6 @@ const css = `
   .pf-setting-sub { margin: 2px 0 0; font-size: 12px; color: var(--text-muted);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  /* danger */
   .pf-danger { margin: 4px 18px 18px; padding: 14px 18px; border-radius: 14px;
     background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.12);
     display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -135,7 +128,6 @@ const css = `
   }
   .pf-danger-btn:hover { background: #EF4444; color: white; }
 
-  /* header */
   .pf-header { display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
   .pf-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.18em; color: #F47820;
@@ -157,7 +149,6 @@ const css = `
     border: 1.5px solid var(--border); box-shadow: var(--shadow);
   }
 
-  /* ── Responsive overrides ── */
   @media (max-width: 480px) {
     .pf-header { flex-direction: column; align-items: flex-start; }
     .pf-edit-btn { width: 100%; }
@@ -173,45 +164,101 @@ const css = `
   }
 `
 
+/* ── Read olUser from sessionStorage ── */
+function getOlUser() {
+  try { return JSON.parse(sessionStorage.getItem('olUser') || '{}') } catch { return {} }
+}
+
+function formatLastLogin(iso) {
+  if (!iso) return '—'
+  try {
+    return new Date(iso).toLocaleDateString('en-KE', { day:'numeric', month:'short', year:'numeric' })
+  } catch { return '—' }
+}
+
 export default function ProfilePage() {
   const { user, showToast } = useApp()
+
+  // Pull from sessionStorage olUser — the richest source
+  const olUser = getOlUser()
+
+  // Merge: context user takes precedence, olUser fills gaps
+  const merged = {
+    name:        olUser.name        || user?.name        || olUser.fullName || '—',
+    email:       olUser.email       || user?.email       || '—',
+    phone:       olUser.phone       || user?.phone       || '—',
+    provider:    olUser.provider    || user?.provider    || olUser.companyName || '—',
+    companyName: olUser.companyName || user?.companyName || '—',
+    plan:        olUser.plan        || user?.plan        || null,
+    dataUsed:    olUser.dataUsed    ?? user?.dataUsed    ?? 0,
+    dataTotal:   olUser.dataTotal   ?? user?.dataTotal   ?? 0,
+    expiry:      olUser.expiry      || user?.expiry      || null,
+    mode:        olUser.mode        || user?.mode        || null,
+    partyId:     olUser.partyId     || user?.partyId     || '—',
+    userId:      olUser.userId      || user?.userId      || '—',
+    tenantId:    olUser.tenantId    || user?.tenantId    || '—',
+    timezone:    olUser.timezone    || '—',
+    lastLogin:   null,
+  }
+
+  // lastLogin comes from onelynq_user
+  try {
+    const onelynqUser = JSON.parse(sessionStorage.getItem('onelynq_user') || '{}')
+    merged.lastLogin = onelynqUser.lastLogin || null
+    // fullName fallback
+    if (merged.name === '—' && onelynqUser.fullName) merged.name = onelynqUser.fullName
+    if (merged.timezone === '—' && onelynqUser.timezone) merged.timezone = onelynqUser.timezone
+  } catch (_) {}
+
   const [editing, setEditing]     = useState(false)
   const [activeField, setActiveField] = useState(null)
   const [form, setForm] = useState({
-    name:     user?.name     || 'Joy Letim',
-    email:    user?.email    || 'joy@example.com',
-    phone:    user?.phone    || '+254742142959',
-    location: 'Nairobi, Kenya',
-    idNumber: 'KE1234567',
+    name:     merged.name,
+    email:    merged.email,
+    phone:    merged.phone,
+    location: merged.timezone !== '—' ? merged.timezone.replace('/', ', ').replace('_', ' ') : 'Kenya',
+    provider: merged.provider,
   })
 
-  const set   = (k, v) => setForm(p => ({ ...p, [k]: v }))
-  const save  = ()     => { setEditing(false); showToast('Profile updated!', 'success') }
-  const initials = form.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+  const set  = (k, v) => setForm(p => ({ ...p, [k]: v }))
+  const save = ()     => { setEditing(false); showToast('Profile updated!', 'success') }
+
+  const initials = form.name
+    .split(' ').map(n => n[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() || '??'
 
   const fields = [
-    { label: 'Full Name',     key: 'name',     icon: User,   type: 'text'  },
-    { label: 'Email Address', key: 'email',    icon: Mail,   type: 'email' },
-    { label: 'Phone Number',  key: 'phone',    icon: Phone,  type: 'tel'   },
-    { label: 'Location',      key: 'location', icon: MapPin, type: 'text'  },
-    { label: 'ID Number',     key: 'idNumber', icon: Shield, type: 'text',
-      fullWidth: true },
+    { label: 'Full Name',    key: 'name',     icon: User,   type: 'text'  },
+    { label: 'Email Address',key: 'email',    icon: Mail,   type: 'email' },
+    { label: 'Phone Number', key: 'phone',    icon: Phone,  type: 'tel'   },
+    { label: 'Location',     key: 'location', icon: MapPin, type: 'text'  },
+    // { label: 'ISP Provider', key: 'provider', icon: Shield, type: 'text', fullWidth: true },
   ]
 
+  const dataLabel = merged.dataTotal > 0
+    ? `${merged.dataUsed} / ${merged.dataTotal} GB`
+    : 'Unlimited'
+
   const stats = [
-    { icon: Zap,      label: 'Current Plan', value: user?.plan || 'Basic 10Mbps',
-      color: '#F47820', bg: 'rgba(244,120,32,0.12)' },
-    { icon: Activity, label: 'Data Used',
-      value: `${user?.dataUsed || 4.2} / ${user?.dataTotal || 10} GB`,
-      color: '#3B82F6', bg: 'rgba(59,130,246,0.12)' },
-    { icon: Star,     label: 'Member Since', value: 'Jan 2026',
-      color: '#8B5CF6', bg: 'rgba(139,92,246,0.12)' },
+    {
+      icon: Zap,      label: 'Current Plan',
+      value: merged.plan || (merged.mode === 'onnet' ? 'On-Net' : 'No plan'),
+      color: '#F47820', bg: 'rgba(244,120,32,0.12)',
+    },
+    {
+      icon: Activity, label: 'Data Used',
+      value: dataLabel,
+      color: '#3B82F6', bg: 'rgba(59,130,246,0.12)',
+    },
+    {
+      icon: Star,     label: 'Last Login',
+      value: formatLastLogin(merged.lastLogin),
+      color: '#8B5CF6', bg: 'rgba(139,92,246,0.12)',
+    },
   ]
 
   const settings = [
-    // { icon: Lock,   label: 'Change Password', sub: 'Last changed 30 days ago',          badge: null, badgeType: null },
-    { icon: Bell,   label: 'Notifications',   sub: 'Email & SMS alerts enabled',         badge: '3',  badgeType: 'blue' },
-    { icon: Shield, label: 'Two-Factor Auth', sub: 'Add extra security to your account', badge: 'Off',badgeType: 'orange' },
+    { icon: Bell,   label: 'Notifications',   sub: 'Email & SMS alerts enabled',         badge: '3',  badgeType: 'blue'   },
+    { icon: Shield, label: 'Two-Factor Auth',  sub: 'Add extra security to your account', badge: 'Off',badgeType: 'orange' },
   ]
 
   return (
@@ -225,14 +272,14 @@ export default function ProfilePage() {
             <p className="pf-eyebrow">Account</p>
             <h1 className="pf-h1">My Profile</h1>
           </div>
-          <button
+          {/* <button
             className={`pf-edit-btn ${editing ? 'saving' : 'idle'}`}
             onClick={() => editing ? save() : setEditing(true)}
           >
             {editing
               ? <><Check size={14} strokeWidth={3}/> Save Changes</>
               : <><Edit3 size={14}/> Edit Profile</>}
-          </button>
+          </button> */}
         </div>
 
         {/* ── Hero Card ── */}
@@ -255,11 +302,18 @@ export default function ProfilePage() {
                   </span>
                 </div>
                 <p className="pf-email">{form.email}</p>
+                {merged.companyName !== '—' && (
+                  <p style={{ margin:'3px 0 0', fontSize:12, color:'var(--text-muted)' }}>
+                    {/* {merged.companyName} */}
+                  </p>
+                )}
               </div>
 
               <div className="pf-status">
                 <span className="pf-dot"/>
-                <span className="pf-status-label">Active</span>
+                <span className="pf-status-label">
+                  {merged.mode === 'onnet' ? 'On-Net' : 'Active'}
+                </span>
               </div>
             </div>
 
@@ -329,10 +383,28 @@ export default function ProfilePage() {
               </div>
             ))}
           </div>
+
+          {/* ID strip */}
+          {/* <div style={{ margin:'0 22px 20px', padding:'12px 16px', borderRadius:12,
+            background:'var(--bg)', border:'1px solid var(--border)',
+            display:'flex', gap:24, flexWrap:'wrap' }}>
+            {[
+              { l:'Party ID',  v: merged.partyId?.slice(0,16)  + '…' },
+              { l:'User ID',   v: merged.userId?.slice(0,16)   + '…' },
+              { l:'Tenant ID', v: merged.tenantId?.slice(0,16) + '…' },
+            ].map(({ l, v }) => (
+              <div key={l}>
+                <p style={{ margin:0, fontSize:10, fontWeight:700, letterSpacing:'0.08em',
+                  textTransform:'uppercase', color:'var(--text-muted)' }}>{l}</p>
+                <p style={{ margin:'2px 0 0', fontSize:11, fontFamily:'monospace',
+                  color:'var(--text-sub)' }}>{v}</p>
+              </div>
+            ))}
+          </div> */}
         </div>
 
         {/* ── Account Settings ── */}
-        <div className="pf-card" style={{ marginBottom: 0 }}>
+        {/* <div className="pf-card" style={{ marginBottom: 0 }}>
           <div className="pf-card-head">
             <div>
               <h3 className="pf-card-title">Account Settings</h3>
@@ -373,7 +445,7 @@ export default function ProfilePage() {
             </div>
             <button className="pf-danger-btn">Delete</button>
           </div>
-        </div>
+        </div> */}
 
       </div>
     </>

@@ -6,18 +6,40 @@ import {
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
-const usageData = [
-  { time: 'Mon',   download: 0.8,  upload: 0.2 },
-  { time: 'Tue',   download: 1.4,  upload: 0.4 },
-  { time: 'Wed',   download: 0.6,  upload: 0.1 },
-  { time: 'Thu',   download: 2.1,  upload: 0.6 },
-  { time: 'Fri',   download: 1.8,  upload: 0.5 },
-  { time: 'Sat',   download: 3.2,  upload: 0.8 },
-  { time: 'Today', download: 1.2,  upload: 0.3 },
-]
+/* ─────────────────────────────────────────────────────────
+   AUTH HEADERS
+───────────────────────────────────────────────────────── */
+function authHeaders(extra = {}) {
+  const token    = sessionStorage.getItem('onelynq_accessToken') || ''
+  const tenantId = sessionStorage.getItem('onelynq_tenantId')    || ''
+  return {
+    'Content-Type':  'application/json',
+    'Authorization': `Bearer ${token}`,
+    'X-Tenant-Id':   tenantId,
+    ...extra,
+  }
+}
 
+const API = import.meta.env.VITE_API_BASE_URL
+
+/* ─────────────────────────────────────────────────────────
+   BYTES → HUMAN READABLE
+───────────────────────────────────────────────────────── */
+function bytesToGB(bytes) {
+  if (!bytes || bytes === 0) return 0
+  return parseFloat((bytes / (1024 ** 3)).toFixed(2))
+}
+
+function bytesToMB(bytes) {
+  if (!bytes || bytes === 0) return 0
+  return parseFloat((bytes / (1024 ** 2)).toFixed(2))
+}
+
+/* ─────────────────────────────────────────────────────────
+   CHART TOOLTIP
+───────────────────────────────────────────────────────── */
 const CT = ({ active, payload, label }) =>
   active && payload?.length ? (
     <div className="bg-white rounded-xl p-3 text-xs" style={{ border: '1px solid var(--border)', boxShadow: '0 4px 16px rgba(27,58,143,0.1)' }}>
@@ -32,8 +54,11 @@ const CT = ({ active, payload, label }) =>
     </div>
   ) : null
 
+/* ─────────────────────────────────────────────────────────
+   DATA RING
+───────────────────────────────────────────────────────── */
 function DataRing({ used, total }) {
-  const pct    = Math.min((used / total) * 100, 100)
+  const pct    = total > 0 ? Math.min((used / total) * 100, 100) : 0
   const circ   = 2 * Math.PI * 45
   const offset = circ - (pct / 100) * circ
   const danger = pct >= 80
@@ -61,12 +86,17 @@ function DataRing({ used, total }) {
   )
 }
 
-function buildAlerts(user) {
+/* ─────────────────────────────────────────────────────────
+   ALERTS
+───────────────────────────────────────────────────────── */
+function buildAlerts(user, hasParty, activePackage) {
   const alerts = []
-  if (user) {
-    const used  = user.dataUsed  ?? 0
-    const total = user.dataTotal ?? 10
+
+  if (hasParty && activePackage) {
+    const used  = activePackage.dataUsedGB  ?? 0
+    const total = activePackage.dataTotalGB ?? 0
     const pct   = total > 0 ? (used / total) * 100 : 0
+
     if (pct >= 80 && pct < 100) alerts.push({
       id: 'data-low', icon: Wifi,
       title: `${(total - used).toFixed(1)} GB remaining on your plan`,
@@ -74,6 +104,7 @@ function buildAlerts(user) {
       action: 'Top Up Now', to: '/packages',
       color: '#F47820', bg: 'rgba(244,120,32,0.07)', border: 'rgba(244,120,32,0.22)',
     })
+
     if (pct >= 100) alerts.push({
       id: 'data-out', icon: AlertTriangle,
       title: 'Your data has run out',
@@ -81,17 +112,19 @@ function buildAlerts(user) {
       action: 'Buy Package', to: '/packages',
       color: '#EF4444', bg: 'rgba(239,68,68,0.07)', border: 'rgba(239,68,68,0.22)',
     })
-    if (user.expiry) {
-      const daysLeft = Math.ceil((new Date(user.expiry) - new Date()) / 86400000)
+
+    if (activePackage.expiryDate) {
+      const daysLeft = Math.ceil((new Date(activePackage.expiryDate) - new Date()) / 86400000)
       if (daysLeft <= 5 && daysLeft > 0) alerts.push({
         id: 'expiry-soon', icon: Clock,
         title: `Your plan expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`,
-        sub: `Renew before ${user.expiry} to avoid interruption.`,
+        sub: `Renew before ${activePackage.expiryDate} to avoid interruption.`,
         action: 'Renew Now', to: '/packages',
         color: '#F59E0B', bg: 'rgba(245,158,11,0.07)', border: 'rgba(245,158,11,0.22)',
       })
     }
   }
+
   alerts.push({
     id: 'water-bill', icon: Droplets,
     title: 'Water bill due in 3 days',
@@ -113,9 +146,13 @@ function buildAlerts(user) {
     action: 'Top Up', to: '/services',
     color: '#10B981', bg: 'rgba(16,185,129,0.07)', border: 'rgba(16,185,129,0.22)',
   })
+
   return alerts
 }
 
+/* ─────────────────────────────────────────────────────────
+   ALERT CARD
+───────────────────────────────────────────────────────── */
 function AlertCard({ alert, onDismiss }) {
   const navigate = useNavigate()
   const Icon = alert.icon
@@ -146,8 +183,10 @@ function AlertCard({ alert, onDismiss }) {
   )
 }
 
-/* ── Current package card ──────────────────────────────── */
-function CurrentPackageCard({ user, hasPlan, navigate }) {
+/* ─────────────────────────────────────────────────────────
+   CURRENT PACKAGE CARD
+───────────────────────────────────────────────────────── */
+function CurrentPackageCard({ activePackage, hasPlan, navigate }) {
   return (
     <div className="card-elevated rounded-3xl p-5 flex flex-col">
       <div className="flex items-center justify-between mb-4">
@@ -155,11 +194,9 @@ function CurrentPackageCard({ user, hasPlan, navigate }) {
           My Package
         </h3>
         {hasPlan && (
-          <button
-            onClick={() => navigate('/packages')}
+          <button onClick={() => navigate('/packages')}
             className="flex items-center gap-1 text-xs font-bold transition-all"
-            style={{ color: 'var(--orange)' }}
-          >
+            style={{ color: 'var(--orange)' }}>
             View <ChevronRight size={12} />
           </button>
         )}
@@ -167,7 +204,6 @@ function CurrentPackageCard({ user, hasPlan, navigate }) {
 
       {hasPlan ? (
         <div className="flex-1 flex flex-col gap-3">
-          {/* Plan badge */}
           <div className="flex items-center gap-3 p-3 rounded-2xl"
             style={{ background: 'rgba(27,58,143,0.05)', border: '1px solid rgba(27,58,143,0.12)' }}>
             <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -176,10 +212,10 @@ function CurrentPackageCard({ user, hasPlan, navigate }) {
             </div>
             <div className="min-w-0">
               <p className="text-sm font-black truncate" style={{ color: 'var(--text-main)' }}>
-                {user?.plan}
+                {activePackage?.packageName ?? '—'}
               </p>
               <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                Active plan
+                {activePackage?.speed ?? ''} · Active plan
               </p>
             </div>
             <span className="ml-auto text-xs font-bold px-2 py-1 rounded-full flex-shrink-0"
@@ -188,27 +224,28 @@ function CurrentPackageCard({ user, hasPlan, navigate }) {
             </span>
           </div>
 
-          {/* Data bar */}
           <div className="space-y-1.5">
             <div className="flex justify-between text-xs">
               <span style={{ color: 'var(--text-muted)' }}>Data used</span>
               <span className="font-bold" style={{ color: 'var(--orange)' }}>
-                {user?.dataUsed ?? 0} / {user?.dataTotal ?? 10} GB
+                {activePackage?.dataUsedGB ?? 0} / {activePackage?.dataTotalGB ?? 0} GB
               </span>
             </div>
             <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#EEF2FF' }}>
               <div className="h-full rounded-full transition-all"
                 style={{
-                  width: `${Math.min(((user?.dataUsed ?? 0) / (user?.dataTotal ?? 10)) * 100, 100)}%`,
+                  width: `${(activePackage?.dataTotalGB ?? 0) > 0
+                    ? Math.min(((activePackage?.dataUsedGB ?? 0) / (activePackage?.dataTotalGB ?? 0)) * 100, 100)
+                    : 0}%`,
                   background: 'linear-gradient(90deg,#1B3A8F,#F47820)',
                 }} />
             </div>
           </div>
 
-          {/* Details rows */}
           {[
-            { label: 'Expires',   value: user?.expiry  ?? '2026-07-15' },
-            { label: 'Remaining', value: `${((user?.dataTotal ?? 10) - (user?.dataUsed ?? 0)).toFixed(1)} GB` },
+            { label: 'Expires',   value: activePackage?.expiryDate ?? '—' },
+            { label: 'Remaining', value: `${((activePackage?.dataTotalGB ?? 0) - (activePackage?.dataUsedGB ?? 0)).toFixed(1)} GB` },
+            { label: 'Price',     value: activePackage?.price ? `KES ${activePackage.price.toLocaleString()}` : '—' },
           ].map(({ label, value }) => (
             <div key={label} className="flex justify-between text-xs py-1.5 border-b last:border-0"
               style={{ borderColor: 'var(--border)' }}>
@@ -217,7 +254,6 @@ function CurrentPackageCard({ user, hasPlan, navigate }) {
             </div>
           ))}
 
-          {/* CTA */}
           <button onClick={() => navigate('/packages')}
             className="mt-auto w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
             style={{ background: 'rgba(244,120,32,0.08)', color: '#F47820', border: '1px solid rgba(244,120,32,0.2)' }}
@@ -227,7 +263,6 @@ function CurrentPackageCard({ user, hasPlan, navigate }) {
           </button>
         </div>
       ) : (
-        /* No plan */
         <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 py-4">
           <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
             style={{ background: 'rgba(244,120,32,0.08)' }}>
@@ -239,8 +274,7 @@ function CurrentPackageCard({ user, hasPlan, navigate }) {
               Purchase a package to get connected
             </p>
           </div>
-          <button onClick={() => navigate('/packages')}
-            className="btn-primary text-xs px-4 py-2 rounded-xl">
+          <button onClick={() => navigate('/packages')} className="btn-primary text-xs px-4 py-2 rounded-xl">
             Browse Packages
           </button>
         </div>
@@ -249,22 +283,149 @@ function CurrentPackageCard({ user, hasPlan, navigate }) {
   )
 }
 
+/* ─────────────────────────────────────────────────────────
+   MAIN DASHBOARD
+───────────────────────────────────────────────────────── */
 export default function DashboardPage() {
   const { user } = useApp()
   const navigate  = useNavigate()
-  const hasPlan   = !!(user?.plan && user?.dataTotal > 0)
 
-  const allAlerts    = buildAlerts(user)
+  // ── Get partyId — from user context OR sessionStorage ──────
+  const storedUser = (() => {
+    try { return JSON.parse(sessionStorage.getItem('onelynq_user') || '{}') } catch { return {} }
+  })()
+  const partyId  = user?.partyId || storedUser?.partyId || ''
+  const hasParty = partyId !== '' && partyId != null
+
+  // ── State ──────────────────────────────────────────────────
+  const [metrics,        setMetrics]        = useState(null)
+  const [activePackage,  setActivePackage]  = useState(null)
+  const [metricsLoading, setMetricsLoading] = useState(false)
+  const [packageLoading, setPackageLoading] = useState(false)
+
+  // ── Fetch metrics ──────────────────────────────────────────
+  useEffect(() => {
+    if (!hasParty) { setMetrics(null); return }
+    let cancelled = false
+    setMetricsLoading(true)
+    fetch(`${API}/api/captive-portal/metrics/party/${partyId}`, {
+      headers: authHeaders(),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (cancelled) return
+        if (data?.success && data?.data?.metrics) {
+          setMetrics(data.data.metrics)
+        } else {
+          setMetrics(null)
+        }
+        setMetricsLoading(false)
+      })
+      .catch(() => { if (!cancelled) { setMetrics(null); setMetricsLoading(false) } })
+    return () => { cancelled = true }
+  }, [partyId, hasParty])
+
+  // ── Fetch active package ───────────────────────────────────
+  useEffect(() => {
+    if (!hasParty) { setActivePackage(null); return }
+    let cancelled = false
+    setPackageLoading(true)
+    fetch(`${API}/api/captive-portal/get-active-package`, {
+      method:  'POST',
+      headers: authHeaders(),
+      body:    JSON.stringify({ partyId }),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (cancelled) return
+        if (data?.success && data?.data) {
+          // Normalise the package data — map whatever shape API returns
+          const pkg = data.data
+          setActivePackage({
+            packageName:  pkg.packageName  || pkg.name        || pkg.planName  || null,
+            speed:        pkg.speed        || pkg.dataSpeed   || null,
+            dataTotalGB:  pkg.dataTotalGB  ?? bytesToGB(pkg.dataTotalBytes)  ?? pkg.dataTotal  ?? 0,
+            dataUsedGB:   pkg.dataUsedGB   ?? bytesToGB(pkg.dataUsedBytes)   ?? pkg.dataUsed   ?? 0,
+            expiryDate:   pkg.expiryDate   || pkg.expiry      || null,
+            price:        pkg.price        || pkg.amount      || null,
+            status:       pkg.status       || null,
+            // keep raw in case we need it
+            raw: pkg,
+          })
+        } else {
+          setActivePackage(null)
+        }
+        setPackageLoading(false)
+      })
+      .catch(() => { if (!cancelled) { setActivePackage(null); setPackageLoading(false) } })
+    return () => { cancelled = true }
+  }, [partyId, hasParty])
+
+  // ── Derived metrics values from API response ───────────────
+  // metrics shape: { totalDownloadBytes, totalUploadBytes, totalDataUsedBytes,
+  //                  totalSessionTimeSeconds, formattedTotalData, formattedSessionTime }
+  const totalDownloadGB  = hasParty ? bytesToGB(metrics?.totalDownloadBytes  ?? 0) : 0
+  const totalUploadGB    = hasParty ? bytesToGB(metrics?.totalUploadBytes    ?? 0) : 0
+  const totalDataUsedGB  = hasParty ? bytesToGB(metrics?.totalDataUsedBytes  ?? 0) : 0
+  const sessionTime      = hasParty ? (metrics?.formattedSessionTime ?? '—') : '—'
+  const formattedData    = hasParty ? (metrics?.formattedTotalData   ?? '0 B') : '0 B'
+
+  // ── Active package values ──────────────────────────────────
+  const dataUsed  = activePackage?.dataUsedGB  ?? 0
+  const dataTotal = activePackage?.dataTotalGB ?? 0
+  const planName  = activePackage?.packageName ?? null
+  const expiry    = activePackage?.expiryDate  ?? null
+  const hasPlan   = hasParty && activePackage !== null && planName !== null
+
+  // ── Weekly usage chart — use real data if available ────────
+  const usageData = hasParty && metrics?.weeklyUsage?.length
+    ? metrics.weeklyUsage
+    : [
+        { time: 'Mon',   download: 0, upload: 0 },
+        { time: 'Tue',   download: 0, upload: 0 },
+        { time: 'Wed',   download: 0, upload: 0 },
+        { time: 'Thu',   download: 0, upload: 0 },
+        { time: 'Fri',   download: 0, upload: 0 },
+        { time: 'Sat',   download: 0, upload: 0 },
+        { time: 'Today', download: totalDownloadGB, upload: totalUploadGB },
+      ]
+
+  // ── Session info ───────────────────────────────────────────
+  const ipAddress  = hasParty ? (metrics?.ipAddress      ?? '—') : '—'
+  const macAddress = hasParty ? (metrics?.macAddress     ?? '—') : '—'
+  const gateway    = hasParty ? (metrics?.gateway        ?? '—') : '—'
+  const connSince  = hasParty ? (metrics?.connectedSince ?? '—') : '—'
+
+  // ── Alerts ─────────────────────────────────────────────────
+  const allAlerts     = buildAlerts(user, hasParty, activePackage)
   const [dismissed, setDismissed] = useState([])
   const visibleAlerts = allAlerts.filter(a => !dismissed.includes(a.id))
-  const dismiss = (id) => setDismissed(d => [...d, id])
+  const dismiss       = (id) => setDismissed(d => [...d, id])
 
+  // ── Stats cards ────────────────────────────────────────────
   const stats = [
-    { label: 'Download', value: '18.4',                                          unit: 'Mbps', icon: Download,  color: '#F47820', change: '+2.1', bg: 'rgba(244,120,32,0.08)' },
-    { label: 'Upload',   value: '4.2',                                           unit: 'Mbps', icon: Upload,    color: '#1B3A8F', change: '+0.4', bg: 'rgba(27,58,143,0.08)'  },
-    { label: 'Latency',  value: '12',                                            unit: 'ms',   icon: Activity,  color: '#7C3AED', change: '-3',   bg: 'rgba(124,58,237,0.08)' },
-    { label: 'Session',  value: '2h 14m',                                        unit: '',     icon: Clock,     color: '#0891B2', change: null,   bg: 'rgba(8,145,178,0.08)'  },
-    { label: 'Package',  value: hasPlan ? user?.plan?.split(' ')[0] : 'None',    unit: '',     icon: Package,   color: '#F47820', change: hasPlan ? 'Active' : null, bg: 'rgba(244,120,32,0.08)', link: '/packages' },
+    {
+      label: 'Downloaded', value: totalDownloadGB > 0 ? totalDownloadGB.toFixed(2) : '0',
+      unit: 'GB', icon: Download, color: '#F47820', bg: 'rgba(244,120,32,0.08)',
+    },
+    {
+      label: 'Uploaded', value: totalUploadGB > 0 ? totalUploadGB.toFixed(2) : '0',
+      unit: 'GB', icon: Upload, color: '#1B3A8F', bg: 'rgba(27,58,143,0.08)',
+    },
+    {
+      label: 'Total Used', value: formattedData,
+      unit: '', icon: Activity, color: '#7C3AED', bg: 'rgba(124,58,237,0.08)',
+    },
+    {
+      label: 'Session', value: sessionTime,
+      unit: '', icon: Clock, color: '#0891B2', bg: 'rgba(8,145,178,0.08)',
+    },
+    {
+      label: 'Package',
+      value: packageLoading ? '…' : hasPlan ? (planName?.split(' ')[0] ?? 'Active') : 'None',
+      unit: '', icon: Package, color: '#F47820', bg: 'rgba(244,120,32,0.08)',
+      change: hasPlan ? 'Active' : null, link: '/packages',
+    },
   ]
 
   return (
@@ -277,19 +438,37 @@ export default function DashboardPage() {
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>Real-time network usage & alerts</p>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs bg-white"
-          style={{ border: '1.5px solid rgba(0,166,81,0.25)' }}>
-          <div className="w-2 h-2 rounded-full bg-green-500 status-pulse" />
-          <span className="font-semibold" style={{ color: '#00A651' }}>Connected</span>
+          style={{ border: `1.5px solid ${hasParty ? 'rgba(0,166,81,0.25)' : 'rgba(180,180,180,0.3)'}` }}>
+          <div className={`w-2 h-2 rounded-full ${hasParty ? 'bg-green-500 status-pulse' : 'bg-gray-400'}`} />
+          <span className="font-semibold" style={{ color: hasParty ? '#00A651' : 'var(--text-muted)' }}>
+            {hasParty ? 'Connected' : 'Not Linked'}
+          </span>
         </div>
       </div>
+
+      {/* ── No partyId banner ──────────────────────── */}
+      {!hasParty && (
+        <div className="rounded-2xl p-4 flex items-center gap-3"
+          style={{ background: 'rgba(244,120,32,0.07)', border: '1px solid rgba(244,120,32,0.22)' }}>
+          <AlertCircle size={18} color="#F47820" className="flex-shrink-0" />
+          <div>
+            <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>Account not linked to a service</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              Your account is not activated. Contact support or purchase a package to activate your service.
+            </p>
+          </div>
+          <button onClick={() => navigate('/packages')}
+            className="ml-auto flex-shrink-0 text-xs font-bold flex items-center gap-1"
+            style={{ color: '#F47820' }}>
+            Get Started <ArrowRight size={11} />
+          </button>
+        </div>
+      )}
 
       {/* ── Stats ──────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {stats.map(({ label, value, unit, icon: Icon, color, change, bg, link }) => (
-          <div key={label}
-            className="card-elevated p-4 relative overflow-hidden rounded-2xl"
-            style={{ cursor: link ? 'default' : 'default' }}
-          >
+          <div key={label} className="card-elevated p-4 relative overflow-hidden rounded-2xl">
             <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full opacity-60" style={{ background: bg }} />
             <div className="flex items-center justify-between mb-3">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: bg }}>
@@ -297,31 +476,22 @@ export default function DashboardPage() {
               </div>
               {change && (
                 <span className="text-xs font-bold flex items-center gap-0.5"
-                  style={{
-                    color: change === 'Active' ? '#00A651'
-                      : change.startsWith('-') && label === 'Latency' ? '#00A651'
-                      : 'var(--orange)'
-                  }}>
-                  {change === 'Active'
-                    ? <><span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-0.5 inline-block" />{change}</>
-                    : <><ArrowUpRight size={12} />{change}</>
-                  }
+                  style={{ color: '#00A651' }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-0.5 inline-block" />
+                  {change}
                 </span>
               )}
             </div>
-            <p className="text-2xl font-black truncate" style={{ fontFamily: 'serif', color: 'var(--text-main)' }}>
-              {value}<span className="text-sm font-normal ml-1" style={{ color: 'var(--text-muted)' }}>{unit}</span>
+            <p className="text-xl font-black truncate" style={{ fontFamily: 'serif', color: 'var(--text-main)' }}>
+              {value}
+              {unit && <span className="text-sm font-normal ml-1" style={{ color: 'var(--text-muted)' }}>{unit}</span>}
             </p>
             <div className="flex items-center justify-between mt-0.5">
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{label}</p>
               {link && (
-                <button
-                  onClick={() => navigate(link)}
-                  className="flex items-center gap-0.5 text-xs font-bold transition-all"
-                  style={{ color: '#F47820' }}
-                  onMouseEnter={e => e.currentTarget.style.opacity = '0.75'}
-                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                >
+                <button onClick={() => navigate(link)}
+                  className="flex items-center gap-0.5 text-xs font-bold"
+                  style={{ color: '#F47820' }}>
                   View <ChevronRight size={11} />
                 </button>
               )}
@@ -339,8 +509,12 @@ export default function DashboardPage() {
               <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Download & Upload (GB)</p>
             </div>
             <div className="flex gap-4 text-xs">
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#F47820' }} />Download</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#1B3A8F' }} />Upload</span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#F47820' }} />Download
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#1B3A8F' }} />Upload
+              </span>
             </div>
           </div>
           <ResponsiveContainer width="100%" height={175}>
@@ -368,13 +542,13 @@ export default function DashboardPage() {
         {hasPlan ? (
           <div className="card-elevated rounded-3xl p-5 flex flex-col">
             <h3 className="font-black" style={{ fontFamily: 'serif', color: 'var(--text-main)' }}>Data Usage</h3>
-            <p className="text-xs mt-0.5 mb-4" style={{ color: 'var(--text-muted)' }}>{user?.plan}</p>
+            <p className="text-xs mt-0.5 mb-4" style={{ color: 'var(--text-muted)' }}>{planName}</p>
             <div className="flex-1 flex flex-col items-center justify-center gap-4">
-              <DataRing used={user?.dataUsed ?? 4.2} total={user?.dataTotal ?? 10} />
+              <DataRing used={dataUsed} total={dataTotal} />
               <div className="w-full space-y-2">
                 {[
-                  { l: 'Used',      v: `${user?.dataUsed ?? 4.2} GB`,                                         c: 'var(--text-main)' },
-                  { l: 'Remaining', v: `${((user?.dataTotal ?? 10) - (user?.dataUsed ?? 4.2)).toFixed(1)} GB`, c: 'var(--orange)'    },
+                  { l: 'Used',      v: `${dataUsed} GB`,                         c: 'var(--text-main)' },
+                  { l: 'Remaining', v: `${(dataTotal - dataUsed).toFixed(1)} GB`, c: 'var(--orange)'   },
                 ].map(({ l, v, c }) => (
                   <div key={l} className="flex justify-between text-xs">
                     <span style={{ color: 'var(--text-muted)' }}>{l}</span>
@@ -383,17 +557,19 @@ export default function DashboardPage() {
                 ))}
                 <div className="w-full h-2 rounded-full" style={{ background: '#EEF2FF' }}>
                   <div className="h-full rounded-full transition-all" style={{
-                    width: `${((user?.dataUsed ?? 4.2) / (user?.dataTotal ?? 10)) * 100}%`,
+                    width: `${dataTotal > 0 ? (dataUsed / dataTotal) * 100 : 0}%`,
                     background: 'linear-gradient(90deg,#1B3A8F,#F47820)',
                   }} />
                 </div>
               </div>
             </div>
-            <div className="mt-4 rounded-xl p-3 text-xs flex items-center gap-2"
-              style={{ background: 'rgba(244,120,32,0.07)', border: '1px solid rgba(244,120,32,0.2)' }}>
-              <AlertCircle size={13} color="#F47820" />
-              <span style={{ color: 'var(--orange)' }}>Expires {user?.expiry ?? '2026-07-15'}</span>
-            </div>
+            {expiry && (
+              <div className="mt-4 rounded-xl p-3 text-xs flex items-center gap-2"
+                style={{ background: 'rgba(244,120,32,0.07)', border: '1px solid rgba(244,120,32,0.2)' }}>
+                <AlertCircle size={13} color="#F47820" />
+                <span style={{ color: 'var(--orange)' }}>Expires {expiry}</span>
+              </div>
+            )}
           </div>
         ) : (
           <div className="card-elevated rounded-3xl p-5 flex flex-col items-center justify-center text-center gap-3">
@@ -402,38 +578,65 @@ export default function DashboardPage() {
               <Package size={26} color="#F47820" />
             </div>
             <div>
-              <p className="font-black" style={{ fontFamily: 'serif', color: 'var(--text-main)' }}>No Active Plan</p>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Purchase a package to see your data usage here.</p>
+              <p className="font-black" style={{ fontFamily: 'serif', color: 'var(--text-main)' }}>
+                {packageLoading ? 'Loading…' : 'No Active Plan'}
+              </p>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                {packageLoading
+                  ? 'Fetching your package details'
+                  : hasParty
+                    ? 'Purchase a package to see your data usage here.'
+                    : 'Link your account to see data usage.'}
+              </p>
             </div>
-            <button onClick={() => navigate('/packages')} className="btn-primary text-sm px-4 py-2.5 rounded-xl">
-              Browse Packages
-            </button>
+            {!packageLoading && (
+              <button onClick={() => navigate('/packages')} className="btn-primary text-sm px-4 py-2.5 rounded-xl">
+                Browse Packages
+              </button>
+            )}
           </div>
         )}
       </div>
 
-      {/* ── Active Session  +  My Package  (side by side) ── */}
+      {/* ── Active Session + My Package ────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
         {/* Active Session */}
         <div className="card-elevated rounded-3xl p-5">
           <h3 className="font-black mb-4" style={{ fontFamily: 'serif', color: 'var(--text-main)' }}>Active Session</h3>
-          {[
-            { label: 'IP Address',      value: '192.168.1.45'   },
-            { label: 'MAC Address',     value: 'A1:B2:C3:D4:E5' },
-            { label: 'Gateway',         value: '192.168.1.1'    },
-            { label: 'Connected Since', value: '10:32 AM'       },
-          ].map(({ label, value }) => (
-            <div key={label} className="flex items-center justify-between py-2.5 border-b last:border-0"
-              style={{ borderColor: 'var(--border)' }}>
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{label}</span>
-              <span className="text-xs font-mono font-semibold" style={{ color: 'var(--blue)' }}>{value}</span>
+          {metricsLoading ? (
+            <div className="flex items-center gap-2 py-6 justify-center text-xs" style={{ color: 'var(--text-muted)' }}>
+              <span className="inline-block w-4 h-4 rounded-full border-2 border-t-transparent animate-spin"
+                style={{ borderColor: 'var(--text-muted)', borderTopColor: 'transparent' }} />
+              Loading session data…
             </div>
-          ))}
+          ) : (
+            [
+              { label: 'IP Address',      value: ipAddress  },
+              { label: 'MAC Address',     value: macAddress },
+              { label: 'Gateway',         value: gateway    },
+              { label: 'Connected Since', value: connSince  },
+              { label: 'Total Data Used', value: formattedData },
+              { label: 'Session Time',    value: sessionTime   },
+            ].map(({ label, value }) => (
+              <div key={label} className="flex items-center justify-between py-2.5 border-b last:border-0"
+                style={{ borderColor: 'var(--border)' }}>
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{label}</span>
+                <span className="text-xs font-mono font-semibold"
+                  style={{ color: value === '—' ? 'var(--text-muted)' : 'var(--blue)' }}>
+                  {value}
+                </span>
+              </div>
+            ))
+          )}
         </div>
 
         {/* My Package */}
-        <CurrentPackageCard user={user} hasPlan={hasPlan} navigate={navigate} />
+        <CurrentPackageCard
+          activePackage={activePackage}
+          hasPlan={hasPlan}
+          navigate={navigate}
+        />
       </div>
 
       {/* ── Quick Actions ──────────────────────────── */}
@@ -461,7 +664,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Smart Overview  (bottom) ───────────────── */}
+      {/* ── Smart Overview ─────────────────────────── */}
       {visibleAlerts.length > 0 && (
         <div className="card-elevated rounded-3xl p-5">
           <div className="flex items-center justify-between mb-4">

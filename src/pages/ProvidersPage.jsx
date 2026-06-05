@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import {
   Wifi, MapPin, Phone, Star, ChevronRight,
   RefreshCw, CheckCircle, Clock, PhoneCall,
-  Home, Briefcase, Globe, Plus, X, Tag,
-  ArrowRight, Settings
+  Home, Briefcase, Globe, X, Tag,
+  Settings, WifiOff, AlertCircle,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 
@@ -15,22 +15,6 @@ const CATEGORIES = [
   { id: 'roaming', label: 'Roaming', icon: Globe,     color: '#7C3AED', bg: '#FAF5FF', border: 'rgba(124,58,237,0.25)' },
 ]
 
-/* ── Initial provider data ───────────────────────────── */
-const INITIAL_PROVIDERS = [
-  {
-    id: 1, name: 'DirectCore ISP', type: 'Primary ISP', status: 'active',
-    location: 'Westlands, Nairobi', phone: '+254 20 123 4567',
-    speed: '50 Mbps', uptime: '99.8', rating: 4.8, since: 'Jan 2024',
-    initials: 'DC', categories: ['home'],
-  },
-  {
-    id: 2, name: 'Zuku Fibre', type: 'Backup ISP', status: 'inactive',
-    location: 'Kilimani, Nairobi', phone: '+254 20 765 4321',
-    speed: '30 Mbps', uptime: '97.2', rating: 4.2, since: 'Mar 2024',
-    initials: 'ZK', categories: ['office'],
-  },
-]
-
 const SLA_ROWS = [
   { label: 'SLA Uptime Guarantee', value: '99.5%',     ok: true  },
   { label: 'Fault Response Time',  value: '< 4 hours', ok: true  },
@@ -38,8 +22,14 @@ const SLA_ROWS = [
   { label: 'IP Address Type',      value: 'Dynamic',   ok: false },
 ]
 
-/* ── Star row ────────────────────────────────────────── */
+/* ── Read olUser from sessionStorage ─────────────────── */
+function getOlUser() {
+  try { return JSON.parse(sessionStorage.getItem('olUser') || '{}') } catch { return {} }
+}
+
+/* ── Helpers ─────────────────────────────────────────── */
 function StarRow({ rating }) {
+  if (!rating) return null
   return (
     <div className="flex items-center gap-0.5 mt-1">
       {[...Array(5)].map((_, i) => (
@@ -50,7 +40,6 @@ function StarRow({ rating }) {
   )
 }
 
-/* ── Category pill ───────────────────────────────────── */
 function CategoryPill({ cat, onRemove }) {
   const cfg = CATEGORIES.find(c => c.id === cat)
   if (!cfg) return null
@@ -70,15 +59,10 @@ function CategoryPill({ cat, onRemove }) {
   )
 }
 
-/* ── Category editor ─────────────────────────────────── */
 function CategoryEditor({ providerName, current, onSave, onClose }) {
   const [selected, setSelected] = useState([...current])
-
-  const toggle = (id) => {
-    setSelected(prev =>
-      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
-    )
-  }
+  const toggle = (id) =>
+    setSelected(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id])
 
   return (
     <div className="modal-bg" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -86,9 +70,7 @@ function CategoryEditor({ providerName, current, onSave, onClose }) {
         style={{ boxShadow: 'var(--shadow-lg)' }}>
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h3 className="text-base font-bold" style={{ color: 'var(--text-main)' }}>
-              Manage Categories
-            </h3>
+            <h3 className="text-base font-bold" style={{ color: 'var(--text-main)' }}>Manage Categories</h3>
             <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{providerName}</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-slate-100 transition-all"
@@ -96,11 +78,9 @@ function CategoryEditor({ providerName, current, onSave, onClose }) {
             <X size={16} />
           </button>
         </div>
-
         <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
           Where do you use this provider?
         </p>
-
         <div className="space-y-2 mb-6">
           {CATEGORIES.map(cat => {
             const Icon = cat.icon
@@ -118,27 +98,21 @@ function CategoryEditor({ providerName, current, onSave, onClose }) {
                   <Icon size={15} color={isOn ? 'white' : '#94A3B8'} />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-semibold" style={{ color: isOn ? cat.color : 'var(--text-main)' }}>
-                    {cat.label}
-                  </p>
+                  <p className="text-sm font-semibold" style={{ color: isOn ? cat.color : 'var(--text-main)' }}>{cat.label}</p>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                     {cat.id === 'home'    && 'Your residential connection'}
                     {cat.id === 'office'  && 'Workplace or business use'}
                     {cat.id === 'roaming' && 'When travelling or mobile'}
                   </p>
                 </div>
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all`}
-                  style={{
-                    borderColor: isOn ? cat.color : '#CBD5E1',
-                    background: isOn ? cat.color : 'transparent',
-                  }}>
+                <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
+                  style={{ borderColor: isOn ? cat.color : '#CBD5E1', background: isOn ? cat.color : 'transparent' }}>
                   {isOn && <CheckCircle size={10} color="white" fill="white" />}
                 </div>
               </button>
             )
           })}
         </div>
-
         <button className="btn-primary" onClick={() => { onSave(selected); onClose() }}>
           <CheckCircle size={15} /> Save Categories
         </button>
@@ -147,7 +121,6 @@ function CategoryEditor({ providerName, current, onSave, onClose }) {
   )
 }
 
-/* ── Provider card ───────────────────────────────────── */
 function ProviderCard({ p, expanded, onToggle, onCategoryUpdate, onSwitch }) {
   const [showCatEditor, setShowCatEditor] = useState(false)
   const navigate = useNavigate()
@@ -166,17 +139,14 @@ function ProviderCard({ p, expanded, onToggle, onCategoryUpdate, onSwitch }) {
           border: p.status === 'active' ? '1.5px solid rgba(15,118,110,0.2)' : '1px solid var(--border)',
         }}>
 
-        {/* Status top bar */}
         <div className="h-1 w-full" style={{
           background: p.status === 'active'
             ? 'linear-gradient(90deg, #0F766E, #14B8A6)'
             : 'linear-gradient(90deg, #CBD5E1, #E2E8F0)',
         }} />
 
-        {/* Header */}
         <div className="p-5 cursor-pointer select-none" onClick={onToggle}>
           <div className="flex items-start gap-3">
-            {/* Avatar */}
             <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-sm font-bold flex-shrink-0"
               style={{
                 background: p.status === 'active' ? 'rgba(15,118,110,0.1)' : 'var(--bg)',
@@ -187,28 +157,24 @@ function ProviderCard({ p, expanded, onToggle, onCategoryUpdate, onSwitch }) {
               {p.initials}
             </div>
 
-            {/* Name block */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-0.5">
                 <span className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{p.name}</span>
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
                   style={p.status === 'active'
                     ? { background: '#F0FDFA', color: 'var(--teal)', border: '1px solid rgba(15,118,110,0.2)' }
-                    : { background: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }
-                  }>
+                    : { background: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
                   {p.status === 'active' ? '● Active' : '○ Inactive'}
                 </span>
               </div>
-              <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>{p.type}</p>
-              <StarRow rating={p.rating} />
+              <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>{p.companyName ?? '—'}</p>
+              {p.rating && <StarRow rating={p.rating} />}
 
-              {/* Category pills */}
               <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                {p.categories.length > 0
-                  ? p.categories.map(c => (
+                {(p.categories ?? []).length > 0
+                  ? (p.categories ?? []).map(c => (
                       <CategoryPill key={c} cat={c}
-                        onRemove={cat => onCategoryUpdate(p.id, p.categories.filter(x => x !== cat))}
-                      />
+                        onRemove={cat => onCategoryUpdate(p.id, (p.categories ?? []).filter(x => x !== cat))} />
                     ))
                   : <span className="text-xs" style={{ color: 'var(--text-muted)' }}>No categories set</span>
                 }
@@ -228,9 +194,13 @@ function ProviderCard({ p, expanded, onToggle, onCategoryUpdate, onSwitch }) {
             }} />
           </div>
 
-          {/* Stat boxes */}
+          {/* Stats grid */}
           <div className="grid grid-cols-3 gap-2 mt-4">
-            {[{ l: 'Speed', v: p.speed }, { l: 'Uptime', v: `${p.uptime}%` }, { l: 'Since', v: p.since }].map(({ l, v }) => (
+            {[
+              { l: 'Mode',  v: p.mode ?? '—' },
+              { l: 'Plan',  v: p.plan ?? 'No plan' },
+              { l: 'Data',  v: p.dataTotal > 0 ? `${p.dataTotal} GB` : 'Unlimited' },
+            ].map(({ l, v }) => (
               <div key={l} className="rounded-xl p-2.5 text-center" style={{ background: 'var(--bg)' }}>
                 <p className="text-xs mb-0.5" style={{ color: 'var(--text-muted)' }}>{l}</p>
                 <p className="text-xs font-bold" style={{ color: 'var(--teal)' }}>{v}</p>
@@ -239,31 +209,38 @@ function ProviderCard({ p, expanded, onToggle, onCategoryUpdate, onSwitch }) {
           </div>
         </div>
 
-        {/* Expanded detail */}
         {expanded && (
           <div className="px-5 pb-5 pt-0" style={{ borderTop: '1px solid var(--border)' }}>
             <div className="pt-4 space-y-2 mb-4">
-              {[{ icon: MapPin, text: p.location }, { icon: Phone, text: p.phone }].map(({ icon: Icon, text }) => (
+              {[
+                p.email && { icon: Phone, text: p.email },
+                p.phone && { icon: Phone, text: p.phone },
+              ].filter(Boolean).map(({ icon: Icon, text }) => (
                 <div key={text} className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-sub)' }}>
-                  <Icon size={13} color="var(--teal)" />
-                  {text}
+                  <Icon size={13} color="var(--teal)" /> {text}
                 </div>
               ))}
             </div>
 
-            {/* Uptime bar */}
-            <div className="mb-4">
-              <div className="flex justify-between text-xs mb-1.5">
-                <span style={{ color: 'var(--text-muted)' }}>Network uptime (30d)</span>
-                <span className="font-semibold" style={{ color: 'var(--teal)' }}>{p.uptime}%</span>
+            {/* Data usage bar */}
+            {p.dataTotal > 0 && (
+              <div className="mb-4">
+                <div className="flex justify-between text-xs mb-1.5">
+                  <span style={{ color: 'var(--text-muted)' }}>Data used</span>
+                  <span className="font-semibold" style={{ color: 'var(--teal)' }}>
+                    {p.dataUsed} / {p.dataTotal} GB
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--bg)' }}>
+                  <div className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${Math.min((p.dataUsed / p.dataTotal) * 100, 100)}%`,
+                      background: 'linear-gradient(90deg, #0D5C56, #14B8A6)',
+                    }} />
+                </div>
               </div>
-              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--bg)' }}>
-                <div className="h-full rounded-full transition-all"
-                  style={{ width: `${p.uptime}%`, background: 'linear-gradient(90deg, #0D5C56, #14B8A6)' }} />
-              </div>
-            </div>
+            )}
 
-            {/* Category management shortcut */}
             <div className="rounded-2xl p-3.5 mb-4 flex items-center justify-between"
               style={{ background: 'var(--teal-pale)', border: '1px solid rgba(15,118,110,0.15)' }}>
               <div className="flex items-center gap-2">
@@ -271,8 +248,8 @@ function ProviderCard({ p, expanded, onToggle, onCategoryUpdate, onSwitch }) {
                 <div>
                   <p className="text-xs font-semibold" style={{ color: 'var(--teal-dark)' }}>Categories</p>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {p.categories.length > 0
-                      ? p.categories.map(c => CATEGORIES.find(x => x.id === c)?.label).join(', ')
+                    {(p.categories ?? []).length > 0
+                      ? (p.categories ?? []).map(c => CATEGORIES.find(x => x.id === c)?.label).join(', ')
                       : 'None assigned'}
                   </p>
                 </div>
@@ -284,7 +261,6 @@ function ProviderCard({ p, expanded, onToggle, onCategoryUpdate, onSwitch }) {
               </button>
             </div>
 
-            {/* Action buttons */}
             <div className="flex gap-2">
               <button onClick={handleSwitch}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
@@ -303,11 +279,10 @@ function ProviderCard({ p, expanded, onToggle, onCategoryUpdate, onSwitch }) {
         )}
       </div>
 
-      {/* Category editor modal */}
       {showCatEditor && (
         <CategoryEditor
           providerName={p.name}
-          current={p.categories}
+          current={p.categories ?? []}
           onSave={cats => onCategoryUpdate(p.id, cats)}
           onClose={() => setShowCatEditor(false)}
         />
@@ -318,10 +293,36 @@ function ProviderCard({ p, expanded, onToggle, onCategoryUpdate, onSwitch }) {
 
 /* ── Page ────────────────────────────────────────────── */
 export default function ProvidersPage() {
-  const [providers, setProviders] = useState(INITIAL_PROVIDERS)
-  const [expanded, setExpanded]   = useState(null)
   const { showToast, setActiveProvider } = useApp()
   const navigate = useNavigate()
+
+  // Read provider directly from olUser in sessionStorage — no API call needed
+  const olUser = getOlUser()
+
+  const providerName = olUser.provider ?? olUser.companyName ?? null
+
+  // Build a single normalised provider card from the session data
+  const [providers, setProviders] = useState(() => {
+    if (!providerName) return []
+    return [{
+      id:          olUser.partyId ?? 'session-provider',
+      name:        providerName,
+      companyName: olUser.companyName ?? providerName,
+      status:      olUser.mode === 'onnet' ? 'active' : 'inactive',
+      mode:        olUser.mode ?? null,
+      plan:        olUser.plan ?? null,
+      dataUsed:    olUser.dataUsed ?? 0,
+      dataTotal:   olUser.dataTotal ?? 0,
+      expiry:      olUser.expiry ?? null,
+      email:       olUser.email ?? null,
+      phone:       olUser.phone ?? null,
+      rating:      null,
+      initials:    providerName.slice(0, 2).toUpperCase(),
+      categories:  [],
+    }]
+  })
+
+  const [expanded, setExpanded] = useState(null)
 
   const updateCategories = (id, cats) => {
     setProviders(prev => prev.map(p => p.id === id ? { ...p, categories: cats } : p))
@@ -329,72 +330,93 @@ export default function ProvidersPage() {
   }
 
   const handleSwitch = (provider) => {
-    setActiveProvider({ id: provider.id, name: provider.name, location: provider.location })
+    setActiveProvider?.({ id: provider.id, name: provider.name })
     showToast(`Switched to ${provider.name} — loading packages…`, 'success')
   }
 
   return (
     <div className="animate-fade-in" style={{ width: '100%' }}>
-      {/* Page header */}
-      <div className="mb-7">
+
+      {/* Header */}
+      <div className="mb-6">
         <div className="flex items-center gap-2 mb-1">
           <Wifi size={20} color="var(--teal)" />
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>My Providers</h1>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-main)' }}>Providers</h1>
         </div>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          Manage your ISPs and categorise each connection
+          Manage your ISP connections
         </p>
-        {/* Teal underline accent */}
-        <div className="mt-3 h-0.5 w-10 rounded-full" style={{ background: 'linear-gradient(90deg, var(--teal), var(--teal-light))' }} />
+        <div className="mt-3 h-0.5 w-10 rounded-full"
+          style={{ background: 'linear-gradient(90deg, var(--teal), var(--teal-light))' }} />
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center gap-2 mb-5 flex-wrap">
-        <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Categories:</span>
-        {CATEGORIES.map(c => {
-          const Icon = c.icon
-          return (
-            <div key={c.id} className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
-              style={{ background: c.bg, color: c.color, border: `1px solid ${c.border}` }}>
-              <Icon size={10} />{c.label}
-            </div>
-          )
-        })}
-      </div>
+      {/* Category legend */}
+      {providers.length > 0 && (
+        <div className="flex items-center gap-2 mb-5 flex-wrap">
+          <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Categories:</span>
+          {CATEGORIES.map(c => {
+            const Icon = c.icon
+            return (
+              <div key={c.id} className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
+                style={{ background: c.bg, color: c.color, border: `1px solid ${c.border}` }}>
+                <Icon size={10} />{c.label}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* No provider */}
+      {providers.length === 0 && (
+        <div className="card-elevated rounded-2xl p-10 flex flex-col items-center gap-3 mb-5 text-center">
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-1"
+            style={{ background: 'rgba(15,118,110,0.08)' }}>
+            <WifiOff size={26} color="var(--teal)" />
+          </div>
+          <p className="font-bold text-base" style={{ color: 'var(--text-main)' }}>No provider found</p>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            Please log in again to load your provider.
+          </p>
+        </div>
+      )}
 
       {/* Provider cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '20px' }}>
-  {providers.map(p => (
-    <ProviderCard
-            key={p.id}
-            p={p}
-            expanded={expanded === p.id}
-            onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
-            onCategoryUpdate={updateCategories}
-            onSwitch={handleSwitch}
-          />
-        ))}
-      </div>
+      {providers.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+          {providers.map(p => (
+            <ProviderCard
+              key={p.id}
+              p={p}
+              expanded={expanded === p.id}
+              onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
+              onCategoryUpdate={updateCategories}
+              onSwitch={handleSwitch}
+            />
+          ))}
+        </div>
+      )}
 
-      {/* SLA box */}
-      <div className="card-elevated rounded-2xl p-5">
-        <h3 className="font-bold text-sm mb-4" style={{ color: 'var(--text-main)' }}>Service Agreements</h3>
-        {SLA_ROWS.map(({ label, value, ok }, i) => (
-          <div key={label} className="flex items-center justify-between py-2.5"
-            style={{ borderBottom: i < SLA_ROWS.length - 1 ? '1px solid var(--border)' : 'none' }}>
-            <div className="flex items-center gap-2">
-              {ok
-                ? <CheckCircle size={13} color="var(--teal)" />
-                : <Clock size={13} color="var(--warning)" />
-              }
-              <span className="text-sm" style={{ color: 'var(--text-sub)' }}>{label}</span>
+      {/* SLA */}
+      {providers.length > 0 && (
+        <div className="card-elevated rounded-2xl p-5">
+          <h3 className="font-bold text-sm mb-4" style={{ color: 'var(--text-main)' }}>Service Agreements</h3>
+          {SLA_ROWS.map(({ label, value, ok }, i) => (
+            <div key={label} className="flex items-center justify-between py-2.5"
+              style={{ borderBottom: i < SLA_ROWS.length - 1 ? '1px solid var(--border)' : 'none' }}>
+              <div className="flex items-center gap-2">
+                {ok
+                  ? <CheckCircle size={13} color="var(--teal)" />
+                  : <Clock size={13} color="var(--warning)" />
+                }
+                <span className="text-sm" style={{ color: 'var(--text-sub)' }}>{label}</span>
+              </div>
+              <span className="text-sm font-semibold" style={{ color: ok ? 'var(--text-main)' : 'var(--text-muted)' }}>
+                {value}
+              </span>
             </div>
-            <span className="text-sm font-semibold" style={{ color: ok ? 'var(--text-main)' : 'var(--text-muted)' }}>
-              {value}
-            </span>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

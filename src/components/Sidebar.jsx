@@ -83,10 +83,8 @@ const NAV_SECTIONS = [
     icon: Settings,
     items: {
       onNet: [
-        { to: '/devices',     icon: Cpu,        label: 'Devices'        },
-        // { to: '/routers',     icon: Router,     label: 'Routers'        },
-        // { to: '/preferences', icon: Settings,   label: 'Preferences'    },
-        { to: '/support',     icon: HelpCircle, label: 'Support & FAQs' },
+        { to: '/devices', icon: Cpu,        label: 'Devices'        },
+        { to: '/support', icon: HelpCircle, label: 'Support & FAQs' },
       ],
       offNet: [
         { to: '/preferences', icon: Settings,   label: 'Preferences'    },
@@ -96,16 +94,83 @@ const NAV_SECTIONS = [
   },
 ]
 
-/* ── amber colour constants ─────────────────────────────── */
+/* ── colour constants ───────────────────────────────────── */
 const AMBER       = '#f59e0b'
-const AMBER_DIM   = 'rgba(245,158,11,0.65)'
+const AMBER_DIM   = 'rgba(245,158,11,0.75)'
 const AMBER_BG    = 'rgba(245,158,11,0.10)'
-const AMBER_HOVER = 'rgba(245,158,11,0.06)'
 const WHITE_60    = 'rgba(255,255,255,0.60)'
 const WHITE_35    = 'rgba(255,255,255,0.35)'
 const WHITE_18    = 'rgba(255,255,255,0.18)'
 const WHITE_07    = 'rgba(255,255,255,0.07)'
 const WHITE_05    = 'rgba(255,255,255,0.05)'
+
+/* ── Logo area — handles broken / CORS-blocked images ───── */
+function LogoArea({ tenantConfig, mobile, onClose }) {
+  const [imgFailed, setImgFailed] = useState(false)
+  const hasLogo = !imgFailed && !!tenantConfig?.logo
+
+  // Reset when logo URL changes
+  useEffect(() => { setImgFailed(false) }, [tenantConfig?.logo])
+
+  if (tenantConfig) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+        {hasLogo ? (
+          <img
+            src={tenantConfig.logo}
+            alt={tenantConfig.name}
+            onError={() => setImgFailed(true)}
+            style={{ height: 28, maxWidth: 110, objectFit: 'contain', filter: 'brightness(1.15)' }}
+          />
+        ) : (
+          /* Fallback: amber dot + company name in white */
+          <>
+            <div style={{
+              width: 28, height: 28, borderRadius: 10, flexShrink: 0,
+              background: 'linear-gradient(135deg,#f59e0b,#d97706)',
+              boxShadow: '0 2px 8px rgba(245,158,11,0.35)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Wifi size={14} color="#0a0a0a" strokeWidth={2.5} />
+            </div>
+            <span style={{
+              fontSize: 15,
+              fontWeight: 700,
+              color: '#ffffff',
+              letterSpacing: '-0.3px',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              fontFamily: 'var(--font-display)',
+            }}>
+              {tenantConfig.name}
+            </span>
+          </>
+        )}
+      </div>
+    )
+  }
+
+  /* Off-net: default Onelynq brand */
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{
+        width: 28, height: 28, borderRadius: 10, flexShrink: 0,
+        background: 'linear-gradient(135deg,#f59e0b,#d97706)',
+        boxShadow: '0 2px 8px rgba(245,158,11,0.35)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Wifi size={14} color="#0a0a0a" strokeWidth={2.5} />
+      </div>
+      <span style={{
+        fontSize: 15, fontWeight: 700, color: '#ffffff',
+        letterSpacing: '-0.3px', fontFamily: 'var(--font-display)',
+      }}>
+        One<span style={{ color: AMBER }}>lynq</span>
+      </span>
+    </div>
+  )
+}
 
 function SectionGroup({ section, isOnNet, mobile, onClose, user, openId, setOpenId }) {
   const location = useLocation()
@@ -127,7 +192,6 @@ function SectionGroup({ section, isOnNet, mobile, onClose, user, openId, setOpen
     if (active && !isOpen) setOpenId(section.id)
   }, [location.pathname])
 
-  /* ── Single link (Dashboard) ── */
   if (section.single) {
     return (
       <NavLink
@@ -292,30 +356,10 @@ export default function Sidebar({ mobile = false }) {
         className="px-5 py-4 flex items-center justify-between flex-shrink-0"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
       >
-        <div className="flex items-center gap-2.5">
-          {isOnNet && tenantConfig?.logo ? (
-            <img src={tenantConfig.logo} alt={tenantConfig.name}
-              className="h-7 object-contain" style={{ filter: 'brightness(1.15)' }} />
-          ) : (
-            <>
-              <div
-                className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{
-                  background: 'linear-gradient(135deg,#f59e0b,#d97706)',
-                  boxShadow: '0 2px 8px rgba(245,158,11,0.35)',
-                }}
-              >
-                <Wifi size={14} color="#0a0a0a" strokeWidth={2.5} />
-              </div>
-              <span className="text-base font-bold tracking-tight text-white"
-                style={{ fontFamily: 'var(--font-display)' }}>
-                One<span style={{ color: AMBER }}>lynq</span>
-              </span>
-            </>
-          )}
-        </div>
+        <LogoArea tenantConfig={tenantConfig} mobile={mobile} onClose={handleClose} />
         {mobile && (
-          <button onClick={handleClose} className="p-1.5 rounded-lg transition-all"
+          <button onClick={handleClose}
+            className="p-1.5 rounded-lg transition-all ml-2 flex-shrink-0"
             style={{ color: WHITE_35, background: 'none', border: 'none', cursor: 'pointer' }}
             onMouseEnter={e => e.currentTarget.style.color = '#fff'}
             onMouseLeave={e => e.currentTarget.style.color = WHITE_35}>
@@ -336,9 +380,11 @@ export default function Sidebar({ mobile = false }) {
               boxShadow: isOnNet ? '0 0 0 0 rgba(245,158,11,0.5)' : 'none',
               animation: isOnNet ? 'aPulse 2.2s ease-in-out infinite' : 'none',
             }} />
-          <span className="text-xs font-semibold"
-            style={{ color: isOnNet ? AMBER_DIM : WHITE_35 }}>
-            {isOnNet ? `On-Net · ${tenantConfig?.name || 'Network'}` : 'Off-Net · Global View'}
+          <span className="text-xs font-semibold truncate"
+            style={{ color: isOnNet ? '#ffffff' : WHITE_35 }}>
+            {isOnNet
+              ? <><span style={{ color: AMBER_DIM }}>On-Net · </span>{tenantConfig?.name || 'Network'}</>
+              : 'Off-Net · Global View'}
           </span>
         </div>
       </div>
@@ -355,16 +401,18 @@ export default function Sidebar({ mobile = false }) {
                 background: 'linear-gradient(135deg,#f59e0b,#d97706)',
                 color: '#0a0a0a',
               }}>
-              {user.name?.charAt(0) ?? '?'}
+              {user.name?.charAt(0)?.toUpperCase() ?? '?'}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-white truncate leading-none">{user.name}</p>
+              <p className="text-sm font-semibold truncate leading-none" style={{ color: '#ffffff' }}>
+                {user.name}
+              </p>
               <p className="text-xs mt-0.5 truncate" style={{ color: WHITE_35 }}>
                 {user.phone || user.email}
               </p>
             </div>
           </div>
-          {isOnNet && user.dataTotal > 0 && (
+          {isOnNet && (user.dataTotal ?? 0) > 0 && (
             <div className="mt-2.5 space-y-1">
               <div className="flex justify-between" style={{ fontSize: 11 }}>
                 <span style={{ color: WHITE_35 }}>{user.plan}</span>
@@ -419,7 +467,7 @@ export default function Sidebar({ mobile = false }) {
       <style>{`
         @keyframes aPulse {
           0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.55); }
-          50%     { box-shadow: 0 0 0 5px rgba(245,158,11,0); }
+          50%      { box-shadow: 0 0 0 5px rgba(245,158,11,0); }
         }
       `}</style>
     </aside>

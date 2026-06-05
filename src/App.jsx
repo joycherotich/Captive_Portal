@@ -14,6 +14,9 @@ import SupportPage from './pages/SupportPage'
 import DevicesPage from './pages/DevicesPage'
 import Preferences from './pages/Preferences'
 import Routers from './pages/Routers'
+import BillingPage from './pages/BillingPage'
+import InvoicesPage from './pages/InvoicesPage'
+import WalletPage from './pages/WalletPage'
 
 // Must be INSIDE AppProvider to use useApp()
 function ProtectedRoute({ children }) {
@@ -47,6 +50,11 @@ function AppRoutes() {
         <Route path="/services"      element={<ServicesPage />} />
         <Route path="/support"       element={<SupportPage />} />
         <Route path="/devices"       element={<DevicesPage />} />
+        <Route path="/billing"       element={<BillingPage />} />
+        <Route path="/invoices"       element={<InvoicesPage />} />
+        <Route path="/wallet"       element={<WalletPage />} />
+        
+
         <Route path="/preferences"   element={<Preferences />} />
         <Route path="/routers"       element={<Routers />} />
       </Route>
